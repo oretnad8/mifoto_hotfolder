@@ -32,14 +32,22 @@ export default function ValidateButton({ orderId }: { orderId: string }) {
             disabled={loading}
             className={`
                 relative overflow-hidden group
-                px-4 py-2 rounded-lg text-sm font-semibold
-                transition-all duration-300 transform active:scale-95
+                px-6 py-2 rounded-xl text-sm font-bold
+                transition-all duration-300 transform active:scale-95 shadow-lg
                 ${loading
-                    ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40'}
+                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                    : 'bg-[#D75F1E] hover:bg-[#D75F1E]/90 text-white hover:scale-105'
+                }
             `}
         >
-            <span className="relative z-10">{loading ? 'Procesando...' : 'Validar Pago'}</span>
+            <span className="relative z-10 flex items-center gap-2">
+                {loading ? 'Procesando...' : (
+                    <>
+                        Validar Pago
+                        <i className="ri-check-line"></i>
+                    </>
+                )}
+            </span>
         </button>
     );
 }

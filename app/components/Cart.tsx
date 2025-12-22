@@ -20,9 +20,8 @@ const Cart = ({ items = [], selectedSize, photos = [], onConfirm, onBack, onAddM
   const [showModal, setShowModal] = useState(false);
   const [hasProcessedNew, setHasProcessedNew] = useState(false);
 
-  const isPairSize = (sizeId: string) => {
-    return sizeId === 'kiosco' || sizeId === 'square-small';
-  };
+  // Helper to check if size requires even quantity (removed string-based check)
+  const requiresEven = (size: Size) => !!size.requiresEven;
 
   // Sync props to state if items are provided externally (e.g. loaded from localStorage in parent)
   useEffect(() => {
@@ -38,7 +37,7 @@ const Cart = ({ items = [], selectedSize, photos = [], onConfirm, onBack, onAddM
       let subtotal = 0;
 
       // Calculate subtotal based on size rules
-      if (isPairSize(selectedSize.id)) {
+      if (requiresEven(selectedSize)) {
         subtotal = Math.ceil(totalPhotos / 2) * parseFloat(selectedSize.price);
       } else {
         subtotal = totalPhotos * parseFloat(selectedSize.price);
@@ -58,7 +57,7 @@ const Cart = ({ items = [], selectedSize, photos = [], onConfirm, onBack, onAddM
 
         const newTotal = mergedPhotos.length;
         let newSubtotal = 0;
-        if (isPairSize(selectedSize.id)) {
+        if (requiresEven(selectedSize)) {
           newSubtotal = Math.ceil(newTotal / 2) * parseFloat(selectedSize.price);
         } else {
           newSubtotal = newTotal * parseFloat(selectedSize.price);
@@ -116,7 +115,7 @@ const Cart = ({ items = [], selectedSize, photos = [], onConfirm, onBack, onAddM
     } else {
       const newTotal = newPhotos.length;
       let newSubtotal = 0;
-      if (isPairSize(item.size.id)) {
+      if (requiresEven(item.size)) {
         newSubtotal = Math.ceil(newTotal / 2) * parseFloat(item.size.price);
       } else {
         newSubtotal = newTotal * parseFloat(item.size.price);
@@ -131,7 +130,7 @@ const Cart = ({ items = [], selectedSize, photos = [], onConfirm, onBack, onAddM
   const handleFinalize = () => {
     // Validate pairs
     const invalidItem = cartItems.find((item: CartItem) =>
-      isPairSize(item.size.id) && item.totalPhotos % 2 !== 0
+      requiresEven(item.size) && item.totalPhotos % 2 !== 0
     );
 
     if (invalidItem) {
@@ -194,10 +193,10 @@ const Cart = ({ items = [], selectedSize, photos = [], onConfirm, onBack, onAddM
                   <div>
                     <h3 className="text-xl font-bold text-[#2D3A52]">
                       Producto #{index + 1} - {item.size.name}
-                      {isPairSize(item.size.id) && <span className="ml-2 text-sm text-[#D75F1E] font-normal">(Pack Par)</span>}
+                      {requiresEven(item.size) && <span className="ml-2 text-sm text-[#D75F1E] font-normal">(Pack Par)</span>}
                     </h3>
                     <p className="text-[#2D3A52]/70">
-                      {item.size.dimensions} • ${item.size.price} {isPairSize(item.size.id) ? '(par)' : '(u)'}
+                      {item.size.dimensions} • ${item.size.price} {requiresEven(item.size) ? '(par)' : '(u)'}
                     </p>
                   </div>
                   <div className="text-right">
