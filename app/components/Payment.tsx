@@ -21,8 +21,8 @@ const Payment = ({ orderData, onPaymentSuccess, onBack }: PaymentProps) => {
       setIsProcessing(false);
       const paidOrder = {
         ...orderData,
-        status: 'paid',
-        paidAt: new Date(),
+        status: paymentMethod === 'transfer' ? 'pending' : 'paid',
+        paidAt: paymentMethod === 'transfer' ? undefined : new Date(),
         paymentMethod: paymentMethod
       };
       onPaymentSuccess(paidOrder);

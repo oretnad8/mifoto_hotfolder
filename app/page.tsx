@@ -69,36 +69,108 @@ export default function Home() {
   };
 
   const sendToPrintingSystem = async (orderData: any) => {
+    console.log('Starting sendToPrintingSystem with data:', orderData);
     setIsLoading(true);
     try {
-      // Por cada item en la orden (cada tamaño)
-      for (const item of orderData.items) {
+      // Deep copy created items to avoid mutating state directly
+      const updatedItems = JSON.parse(JSON.stringify(orderData.items));
+
+      // 1. Upload Photos and get server filenames
+      for (let i = 0; i < orderData.items.length; i++) {
+        const item = orderData.items[i];
+        console.log(`Processing item ${i}:`, item);
         const formData = new FormData();
         formData.append('sizeId', item.size.id);
 
-        // item.photos contiene los objetos {file, id, preview...}
         const rawPhotos = item.photos || [];
-
         for (const photo of rawPhotos) {
           if (photo.file) {
             formData.append('photos', photo.file);
           }
         }
 
+        console.log('Uploading photos...');
         const response = await fetch('/api/upload-photos', {
           method: 'POST',
           body: formData,
         });
 
-        if (!response.ok) {
-          console.error('Error uploading photos for size', item.size.id);
+        if (response.ok) {
+          const result = await response.json();
+          // result.files is array of { originalName, fileName }
+          // Map back to updatedItems
+          if (result.files && result.files.length > 0) {
+            console.log('Mapping files. Result files:', result.files);
+            updatedItems[i].photos = updatedItems[i].photos.map((p: any) => {
+              const serverFile = result.files.find((f: any) => f.name === p.name);
+              // Note: endpoint returns { name, fileName }, not originalName wrapped in name? 
+              // CHECK upload-photos route:
+              // uploadedFiles.push({ name: file.name, fileName: fileName });
+              // So property is 'name', not 'originalName'.
+
+              if (!serverFile) {
+                console.warn('Matching file not found for:', p.name);
+              }
+
+              return {
+                ...p,
+                fileName: serverFile ? serverFile.fileName : p.name,
+                file: undefined
+              };
+            });
+          }
+        } else {
+          console.error('Error uploading photos for size', item.size.id, response.status);
         }
       }
+
+      console.log('All photos uploaded. Creating order in DB with items:', updatedItems);
+
+      // 2. Create Order in Database
+      const finalOrder = {
+        client: {
+          name: orderData.customerName,
+          kiosk: orderData.kiosk,
+          // email: orderData.customerEmail 
+        },
+        items: updatedItems,
+        total: orderData.total,
+        paymentMethod: orderData.paymentMethod,
+        status: orderData.status
+      };
+
+      const createResponse = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(finalOrder),
+      });
+
+      console.log('Order creation response status:', createResponse.status);
+
+      if (!createResponse.ok) {
+        const errText = await createResponse.text();
+        console.error('Order creation failed:', errText);
+        throw new Error('Failed to create order: ' + errText);
+      }
+
+      const createdOrder = await createResponse.json();
+      console.log('Order created successfully:', createdOrder);
+
+      // Optionally, if the API returns the created order ID, we can update it?
+      // But we generated ID on frontend. That's fine for now, or use server ID.
+
+      // Clear cart and photos after successful order
+      setCartItems([]);
+      setUploadedPhotos([]);
+      setShowCartIcon(false);
+      localStorage.removeItem('mifoto-cart');
 
       setCurrentScreen(8);
     } catch (error) {
       console.error('Error sending to printing system:', error);
-      alert('Hubo un error al enviar las fotos. Por favor avisa al encargado.');
+      alert('Hubo un error al procesar el pedido. Por favor intente nuevamente. Ver consola para detalles.');
     } finally {
       setIsLoading(false);
     }

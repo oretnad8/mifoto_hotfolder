@@ -8,9 +8,13 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@prisma/client": "^6.19.1",
     "@react-google-maps/api": "^2.19.3",
+    "@types/fs-extra": "^11.0.4",
     "fabric": "^5.5.2",
-    "next": "15.3.2",
+    "fs-extra": "^11.3.3",
+    "next": "^15.5.9",
+    "prisma": "^6.19.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "recharts": "^3.0.2"

@@ -1,0 +1,23 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Order {
+  id              String   @id @default(uuid())
+  client          Json
+  paymentMethod   String   @map("payment_method")
+  status          String   @default("pending") // pending, paid, validated
+  paymentReference String?  @map("payment_reference")
+  total           Float
+  items           Json
+  filesCopied     Boolean  @default(false) @map("files_copied")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("orders")
+}
