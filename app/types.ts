@@ -9,11 +9,23 @@ export interface Size {
     requiresEven?: boolean;
 }
 
+export interface EditParams {
+    rotation: number;
+    scale: number;
+    brightness: number; // 0.5 to 1.5, default 1
+    saturation: number; // 0.5 to 1.5, default 1
+    contrast: number;   // 0.5 to 1.5, default 1
+    fit: 'contain' | 'cover';
+    crop?: { x: number; y: number; width: number; height: number };
+    aspectRatio?: number;
+}
+
 export interface Photo {
     id: string;
     name: string;
     preview: string;
     file: File;
+    editParams?: EditParams;
 }
 
 export interface CartItem {

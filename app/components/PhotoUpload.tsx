@@ -3,6 +3,7 @@
 
 import { useState, useRef, useCallback, ChangeEvent, DragEvent } from 'react';
 import { Photo, Size } from '../types';
+import ImageEditorModal from './ImageEditorModal';
 
 interface PhotoUploadProps {
   selectedSize: Size | null;
@@ -12,6 +13,7 @@ interface PhotoUploadProps {
 
 const PhotoUpload = ({ selectedSize, onPhotosUploaded, onBack }: PhotoUploadProps) => {
   const [photos, setPhotos] = useState<Photo[]>([]);
+  const [editingPhoto, setEditingPhoto] = useState<Photo | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -124,7 +126,7 @@ const PhotoUpload = ({ selectedSize, onPhotosUploaded, onBack }: PhotoUploadProp
     setPhotos(prev => prev.filter(photo => photo.id !== photoId));
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (photos.length > 0) {
       if (selectedSize && isEvenOnlySize(selectedSize.id)) {
         if (photos.length % 2 !== 0) {
@@ -133,7 +135,50 @@ const PhotoUpload = ({ selectedSize, onPhotosUploaded, onBack }: PhotoUploadProp
         }
       }
 
-      onPhotosUploaded(photos);
+      setIsProcessing(true);
+      try {
+        // Process photos that have edits
+        const processedPhotos = await Promise.all(photos.map(async (photo) => {
+          if (photo.editParams) {
+            // This photo has pending edits, process it on server
+            const formData = new FormData();
+            formData.append('file', photo.file);
+            formData.append('params', JSON.stringify(photo.editParams));
+
+            // Use a dynamic import or assuming processImage is available. 
+            // We need to import processImage at the top. I will add the import in a separate step or assume it is done if I check imports.
+            // Wait, I haven't imported processImage in PhotoUpload.tsx yet.
+            // I should add the import.
+
+            const { processImage } = await import('../actions/process-image');
+            const result = await processImage(formData);
+
+            if (result.success && result.data) {
+              const dataUrl: string = result.data;
+              const res = await fetch(dataUrl);
+              const blob = await res.blob();
+              const newFile = new File([blob], photo.file.name, { type: 'image/jpeg' });
+              return {
+                ...photo,
+                file: newFile,
+                preview: dataUrl
+              };
+            } else {
+              console.error(`Error processing ${photo.name}:`, result.error);
+              return photo; // Fallback to original
+            }
+          }
+          return photo;
+        }));
+
+        onPhotosUploaded(processedPhotos);
+      } catch (err) {
+        console.error(err);
+        alert('Hubo un error al procesar las imágenes editadas.');
+      } finally {
+        setIsProcessing(false);
+      }
+
     } else {
       alert('Debes seleccionar al menos una foto con cantidad mayor a 0');
     }
@@ -217,12 +262,19 @@ const PhotoUpload = ({ selectedSize, onPhotosUploaded, onBack }: PhotoUploadProp
                       className="bg-gradient-to-r from-[#CEDFE7] to-[#FCF4F3] rounded-xl p-4 flex items-center gap-4"
                     >
                       {/* Miniatura */}
-                      <div className="w-20 h-20 bg-white rounded-lg overflow-hidden shadow-md flex-shrink-0">
+                      <div
+                        className="w-20 h-20 bg-white rounded-lg overflow-hidden shadow-md flex-shrink-0 relative group cursor-pointer"
+                        onClick={() => setEditingPhoto(photo)}
+                      >
                         <img
                           src={photo.preview}
                           alt={photo.name}
                           className="w-full h-full object-cover object-top"
                         />
+                        {/* Overlay Editar */}
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                          <i className="ri-edit-line text-white text-2xl drop-shadow-md"></i>
+                        </div>
                       </div>
 
                       {/* Info */}
@@ -230,11 +282,13 @@ const PhotoUpload = ({ selectedSize, onPhotosUploaded, onBack }: PhotoUploadProp
                         <p className="font-medium text-[#2D3A52] truncate">{photo.name}</p>
                         <p className="text-sm text-[#2D3A52]/70">
                           {(photo.file.size / 1024 / 1024).toFixed(1)} MB
+                          {photo.editParams && (
+                            <span className="ml-2 inline-flex items-center gap-1 text-[10px] bg-[#D75F1E]/10 text-[#D75F1E] px-2 py-0.5 rounded-full font-bold uppercase">
+                              <i className="ri-magic-line"></i> Editado
+                            </span>
+                          )}
                         </p>
                       </div>
-
-                      {/* Controles de cantidad */}
-
 
                       {/* Eliminar */}
                       <button
@@ -303,7 +357,6 @@ const PhotoUpload = ({ selectedSize, onPhotosUploaded, onBack }: PhotoUploadProp
           </div>
         </div>
 
-        {/* Estado de procesamiento */}
         {isProcessing && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-white rounded-2xl p-8 text-center">
@@ -315,6 +368,24 @@ const PhotoUpload = ({ selectedSize, onPhotosUploaded, onBack }: PhotoUploadProp
           </div>
         )}
       </div>
+
+      {/* Modal de Edición */}
+      {editingPhoto && (
+        <ImageEditorModal
+          photo={editingPhoto}
+          aspectRatio={selectedSize ? (selectedSize.width / selectedSize.height) : undefined}
+          onClose={() => setEditingPhoto(null)}
+          onSave={(editParams, previewUrl) => {
+            // Non-destructive update: Keep original 'file' but update 'preview' and 'editParams'
+            setPhotos(prev => prev.map(p =>
+              p.id === editingPhoto.id
+                ? { ...p, preview: previewUrl, editParams: editParams }
+                : p
+            ));
+            setEditingPhoto(null);
+          }}
+        />
+      )}
     </div>
   );
 };
