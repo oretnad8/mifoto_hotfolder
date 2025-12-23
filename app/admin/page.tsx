@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db';
 import ValidateButton from './ValidateButton';
 import AutoRefresh from '../components/AutoRefresh';
+import PrinterStatusWidget from './PrinterStatusWidget';
 import { Order } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
@@ -24,8 +25,11 @@ export default async function AdminPage() {
                         </h1>
                         <p className="text-[#2D3A52]/70 mt-2 text-lg">Gestión de órdenes y validación de pagos</p>
                     </div>
-                    <div className="bg-gradient-to-r from-[#CEDFE7] to-[#FCF4F3] px-6 py-3 rounded-2xl border border-white/50 text-sm shadow-sm">
-                        Total Órdenes: <span className="font-bold text-[#D75F1E] text-lg ml-1">{allOrders.length}</span>
+                    <div className="flex items-center gap-4">
+                        <PrinterStatusWidget />
+                        <div className="bg-gradient-to-r from-[#CEDFE7] to-[#FCF4F3] px-6 py-3 rounded-2xl border border-white/50 text-sm shadow-sm">
+                            Total Órdenes: <span className="font-bold text-[#D75F1E] text-lg ml-1">{allOrders.length}</span>
+                        </div>
                     </div>
                 </header>
 
