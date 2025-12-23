@@ -11,11 +11,10 @@ interface CartProps {
   onBack: () => void;
   onAddMore: () => void;
   onUpdateCart?: (items: CartItem[]) => void;
+  onClearNewPhotos: () => void;
 }
 
-
-
-const Cart = ({ items = [], selectedSize, photos = [], onConfirm, onBack, onAddMore, onUpdateCart }: CartProps) => {
+const Cart = ({ items = [], selectedSize, photos = [], onConfirm, onBack, onAddMore, onUpdateCart, onClearNewPhotos }: CartProps) => {
   const [cartItems, setCartItems] = useState<CartItem[]>(items);
   const [showModal, setShowModal] = useState(false);
   const [hasProcessedNew, setHasProcessedNew] = useState(false);
@@ -85,9 +84,10 @@ const Cart = ({ items = [], selectedSize, photos = [], onConfirm, onBack, onAddM
       if (onUpdateCart) {
         onUpdateCart(newCartItems);
       }
+      onClearNewPhotos(); // Signal parent to clear source photos to prevent duplication
       setHasProcessedNew(true);
     }
-  }, [photos, selectedSize, hasProcessedNew, cartItems, onUpdateCart]);
+  }, [photos, selectedSize, hasProcessedNew, cartItems, onUpdateCart, onClearNewPhotos]);
 
   // Reset flag if incoming photos change (e.g. re-upload triggered)
   useEffect(() => {

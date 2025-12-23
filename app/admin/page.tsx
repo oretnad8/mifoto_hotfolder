@@ -48,6 +48,7 @@ export default async function AdminPage() {
                                             <th className="p-6 font-semibold">Cliente</th>
                                             <th className="p-6 font-semibold">Método</th>
                                             <th className="p-6 font-semibold">Estado</th>
+                                            <th className="p-6 font-semibold">Tamaño / Cantidad</th>
                                             <th className="p-6 font-semibold">Total</th>
                                             <th className="p-6 font-semibold text-right">Acciones</th>
                                         </tr>
@@ -56,6 +57,7 @@ export default async function AdminPage() {
                                         {allOrders.map((order) => {
                                             const client = order.client as any;
                                             const isPendingTransfer = order.status === 'pending' && order.paymentMethod === 'transfer';
+                                            const items = (order.items as any[]) || [];
 
                                             return (
                                                 <tr key={order.id} className="hover:bg-[#2D3A52]/5 transition-colors group">
@@ -80,6 +82,18 @@ export default async function AdminPage() {
                                                     </td>
                                                     <td className="p-6">
                                                         <StatusBadge status={order.status} />
+                                                    </td>
+                                                    <td className="p-6">
+                                                        <div className="space-y-1">
+                                                            {items.map((item, idx) => (
+                                                                <div key={idx} className="text-sm text-[#2D3A52] flex items-center gap-2">
+                                                                    <span className="font-bold bg-gray-100 px-2 py-0.5 rounded text-xs">
+                                                                        {(item.size?.dimensions || item.size?.name || 'Tamaño?').split(' (')[0]}
+                                                                    </span>
+                                                                    <span className="text-xs text-[#2D3A52]/70">x{item.totalPhotos}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
                                                     </td>
                                                     <td className="p-6 font-bold text-[#2D3A52] text-lg">
                                                         ${order.total.toLocaleString('es-CL')}

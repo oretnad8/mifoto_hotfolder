@@ -269,6 +269,7 @@ export default function Home() {
           onBack={() => setCurrentScreen(3)}
           onAddMore={() => setCurrentScreen(2)} // Volver a selección de tamaño
           onUpdateCart={setCartItems}
+          onClearNewPhotos={() => setUploadedPhotos([])}
         />
       )}
       {currentScreen === 6 && (
