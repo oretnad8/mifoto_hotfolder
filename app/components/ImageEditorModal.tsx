@@ -31,7 +31,7 @@ export default function ImageEditorModal({ photo, aspectRatio, onClose, onSave }
     // Initial load logic: Prefer photo.file (original) to allow re-editing full image
     useEffect(() => {
         let objectUrl: string | null = null;
-        if (photo.file) {
+        if (photo.file && photo.file.size > 0) {
             objectUrl = URL.createObjectURL(photo.file);
             setImageSrc(objectUrl);
         } else {

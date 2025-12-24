@@ -4,6 +4,7 @@
 import { useState, useRef, useCallback, ChangeEvent, DragEvent } from 'react';
 import { Photo, Size } from '../types';
 import ImageEditorModal from './ImageEditorModal';
+import PhotoGrid from './PhotoGrid';
 
 interface PhotoUploadProps {
   selectedSize: Size | null;
@@ -123,7 +124,7 @@ const PhotoUpload = ({ selectedSize, onPhotosUploaded, onBack }: PhotoUploadProp
   };
 
   const removePhoto = (photoId: string) => {
-    setPhotos(prev => prev.filter(photo => photo.id !== photoId));
+    setPhotos(prev => prev.filter(photo => photo.id.toString() !== photoId));
   };
 
   const handleContinue = async () => {
@@ -255,51 +256,11 @@ const PhotoUpload = ({ selectedSize, onPhotosUploaded, onBack }: PhotoUploadProp
                   Fotos Cargadas ({photos.length})
                 </h3>
 
-                <div className="space-y-4 max-h-96 overflow-y-auto pr-4">
-                  {photos.map((photo: Photo) => (
-                    <div
-                      key={photo.id}
-                      className="bg-gradient-to-r from-[#CEDFE7] to-[#FCF4F3] rounded-xl p-4 flex items-center gap-4"
-                    >
-                      {/* Miniatura */}
-                      <div
-                        className="w-20 h-20 bg-white rounded-lg overflow-hidden shadow-md flex-shrink-0 relative group cursor-pointer"
-                        onClick={() => setEditingPhoto(photo)}
-                      >
-                        <img
-                          src={photo.preview}
-                          alt={photo.name}
-                          className="w-full h-full object-cover object-top"
-                        />
-                        {/* Overlay Editar */}
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                          <i className="ri-edit-line text-white text-2xl drop-shadow-md"></i>
-                        </div>
-                      </div>
-
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-[#2D3A52] truncate">{photo.name}</p>
-                        <p className="text-sm text-[#2D3A52]/70">
-                          {(photo.file.size / 1024 / 1024).toFixed(1)} MB
-                          {photo.editParams && (
-                            <span className="ml-2 inline-flex items-center gap-1 text-[10px] bg-[#D75F1E]/10 text-[#D75F1E] px-2 py-0.5 rounded-full font-bold uppercase">
-                              <i className="ri-magic-line"></i> Editado
-                            </span>
-                          )}
-                        </p>
-                      </div>
-
-                      {/* Eliminar */}
-                      <button
-                        onClick={() => removePhoto(photo.id)}
-                        className="w-10 h-10 bg-red-100 hover:bg-red-200 rounded-lg flex items-center justify-center transition-colors duration-200 cursor-pointer"
-                      >
-                        <i className="ri-delete-bin-line text-red-600"></i>
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                <PhotoGrid
+                  photos={photos}
+                  onEdit={(photo) => setEditingPhoto(photo)}
+                  onDelete={(id) => removePhoto(id)}
+                />
               </div>
             )}
           </div>

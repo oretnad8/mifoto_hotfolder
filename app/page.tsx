@@ -9,6 +9,7 @@ import Cart from './components/Cart';
 import Confirmation from './components/Confirmation';
 import Payment from './components/Payment';
 import FinalCode from './components/FinalCode';
+import KioskUploadView from './components/KioskUploadView';
 import { Size, Photo, CartItem, Order } from './types';
 
 export default function Home() {
@@ -21,6 +22,15 @@ export default function Home() {
   const [showCartIcon, setShowCartIcon] = useState(false);
   const [showExitWarning, setShowExitWarning] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isElectron, setIsElectron] = useState(false);
+
+  useEffect(() => {
+    // Check for Electron
+    // @ts-ignore
+    if (window.electron && window.electron.isElectron) {
+      setIsElectron(true);
+    }
+  }, []);
 
   useEffect(() => {
     const savedCart = localStorage.getItem('mifoto-cart');
@@ -251,11 +261,19 @@ export default function Home() {
         />
       )}
       {currentScreen === 3 && (
-        <PhotoUpload
-          selectedSize={selectedSize}
-          onPhotosUploaded={handlePhotosUploaded}
-          onBack={() => setCurrentScreen(2)}
-        />
+        isElectron ? (
+          <KioskUploadView
+            selectedSize={selectedSize}
+            onPhotosUploaded={handlePhotosUploaded}
+            onBack={() => setCurrentScreen(2)}
+          />
+        ) : (
+          <PhotoUpload
+            selectedSize={selectedSize}
+            onPhotosUploaded={handlePhotosUploaded}
+            onBack={() => setCurrentScreen(2)}
+          />
+        )
       )}
 
       {/* Screen 4 (Editor) Eliminado */}
