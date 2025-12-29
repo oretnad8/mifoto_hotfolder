@@ -24,11 +24,24 @@ type ViewState = 'idle' | 'scanning_drives' | 'drive_selection' | 'scanning_file
 const KioskUploadView = ({ selectedSize, onPhotosUploaded, onBack }: KioskUploadViewProps) => {
     const [viewState, setViewState] = useState<ViewState>('idle');
     const [drives, setDrives] = useState<Drive[]>([]);
+
+    // Navigation State
+    const [currentPath, setCurrentPath] = useState<string>('');
+    const [history, setHistory] = useState<string[]>([]);
+    const [folders, setFolders] = useState<{ name: string, path: string }[]>([]);
+
     const [photos, setPhotos] = useState<Photo[]>([]);
-    const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set());
+
+    // GLOBAL SELECTION STATE: Map path/ID -> Photo Object
+    // This ensures we don't lose selection when changing folders
+    const [selectedPhotosMap, setSelectedPhotosMap] = useState<Map<string | number, Photo>>(new Map());
+
     const [editingPhoto, setEditingPhoto] = useState<Photo | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const [showNoUSBErr, setShowNoUSBErr] = useState(false);
+
+    // Derived generic Set for PhotoGrid compatibility
+    const selectedIds = new Set(selectedPhotosMap.keys());
 
     const isEvenOnlySize = (sizeId: string) => {
         return sizeId === 'kiosco';
@@ -59,18 +72,16 @@ const KioskUploadView = ({ selectedSize, onPhotosUploaded, onBack }: KioskUpload
         }
     };
 
-    // --- Step 2: Scan Files ---
-    const handleDriveSelect = async (drive: Drive) => {
-        const path = drive.mountpoints[0]?.path;
-        if (!path) return;
-
+    // --- Step 2: Scan/Nav Logic ---
+    const loadPath = async (path: string) => {
         setViewState('scanning_files');
         try {
             // @ts-ignore
             const result = await window.electron.scanDirectory(path);
-            if (result.success && result.files) {
-                const scanned: Photo[] = result.files.map((f: any) => ({
-                    id: Date.now() + Math.random(),
+            if (result.success) {
+                // Map files with STABLE ID (path) so selection persists
+                const scanned: Photo[] = (result.files || []).map((f: any) => ({
+                    id: f.path, // STABLE ID
                     file: { name: f.name, size: 0, type: 'image/jpeg', path: f.path } as unknown as File,
                     preview: f.preview,
                     name: f.name,
@@ -78,56 +89,92 @@ const KioskUploadView = ({ selectedSize, onPhotosUploaded, onBack }: KioskUpload
                 }));
 
                 setPhotos(scanned);
-                setSelectedIds(new Set()); // Start clean
+                setFolders(result.folders || []);
+                setCurrentPath(path);
                 setViewState('gallery');
             } else {
-                alert("No se encontraron imágenes en esta unidad.");
-                setViewState('drive_selection');
+                alert("Error al leer directorio.");
+                setViewState('drive_selection'); // fallback
             }
         } catch (e) {
             console.error(e);
-            alert("Error leyendo la unidad.");
+            alert("Error leyendo la ruta.");
             setViewState('drive_selection');
         }
     };
 
-    // --- Selection Logic ---
-    const toggleSelect = (photo: Photo) => {
-        const newSet = new Set(selectedIds);
-        if (newSet.has(photo.id)) {
-            newSet.delete(photo.id);
-        } else {
-            newSet.add(photo.id);
-        }
-        setSelectedIds(newSet);
+    const handleDriveSelect = (drive: Drive) => {
+        const path = drive.mountpoints[0]?.path;
+        if (!path) return;
+
+        // Reset navigation stack
+        setHistory([]);
+        setSelectedPhotosMap(new Map()); // Optional: Clear selection on new drive? Or keep?
+        // Let's clear to avoid mixing drives.
+        loadPath(path);
     };
 
-    const selectAll = () => {
-        const allIds = photos.map(p => p.id);
-        setSelectedIds(new Set(allIds));
+    const handleEnterFolder = (folderPath: string) => {
+        setHistory(prev => [...prev, currentPath]);
+        loadPath(folderPath);
+    };
+
+    const handleNavigateBack = () => {
+        if (history.length === 0) {
+            // Back to Drive Selection
+            setViewState('drive_selection');
+            setDrives([]); // Will re-scan if they click USB again or we can keep them?
+            // Actually nice to keep drives but refresh? Let's go to drive_selection view.
+            handleStartUsb(); // Refresh drives
+            return;
+        }
+
+        const prevPath = history[history.length - 1];
+        setHistory(prev => prev.slice(0, -1));
+        loadPath(prevPath);
+    };
+
+    // --- Selection Logic ---
+    const toggleSelect = (photo: Photo) => {
+        const newMap = new Map(selectedPhotosMap);
+        if (newMap.has(photo.id)) {
+            newMap.delete(photo.id);
+        } else {
+            newMap.set(photo.id, photo);
+        }
+        setSelectedPhotosMap(newMap);
+    };
+
+    const selectAllInView = () => {
+        const newMap = new Map(selectedPhotosMap);
+        photos.forEach(p => newMap.set(p.id, p));
+        setSelectedPhotosMap(newMap);
     };
 
     const deselectAll = () => {
-        setSelectedIds(new Set());
+        setSelectedPhotosMap(new Map());
     };
 
     // --- Editor Integration ---
     const handleEditClick = async (photo: Photo) => {
-        // Hydrate the file if it's a mock object from Electron
-        // Valid real file has size > 0. Mock has size 0/undefined but has a 'path' property we added.
         if (!photo.file.size && (photo.file as any).path) {
-            setIsProcessing(true); // Show loading overlay
+            setIsProcessing(true);
             try {
-                console.log("Hydrating local file:", photo.preview);
                 const res = await fetch(photo.preview);
                 if (!res.ok) throw new Error("Failed to fetch local file");
 
                 const blob = await res.blob();
                 const newFile = new File([blob], photo.name, { type: res.headers.get('content-type') || 'image/jpeg' });
-
-                // Update the photo in state with the REAL file so we don't fetch again
                 const hydratedPhoto = { ...photo, file: newFile };
+
+                // Update in view
                 setPhotos(prev => prev.map(p => p.id === photo.id ? hydratedPhoto : p));
+                // Update in selection map if exists
+                if (selectedPhotosMap.has(photo.id)) {
+                    const newMap = new Map(selectedPhotosMap);
+                    newMap.set(photo.id, hydratedPhoto);
+                    setSelectedPhotosMap(newMap);
+                }
 
                 setEditingPhoto(hydratedPhoto);
             } catch (e) {
@@ -137,35 +184,34 @@ const KioskUploadView = ({ selectedSize, onPhotosUploaded, onBack }: KioskUpload
                 setIsProcessing(false);
             }
         } else {
-            // Already have a real file (e.g. uploaded or already hydrated)
             setEditingPhoto(photo);
         }
     };
 
     const handleSaveEdit = (editParams: any, previewUrl: string) => {
-        setPhotos(prev => prev.map(p => {
-            if (p.id === editingPhoto?.id) {
-                const updated = {
-                    ...p,
-                    preview: previewUrl,
-                    editParams: editParams
-                };
-                // Auto-select after editing if not selected
-                if (!selectedIds.has(p.id)) {
-                    const newSet = new Set(selectedIds);
-                    newSet.add(p.id);
-                    setSelectedIds(newSet);
-                }
-                return updated;
-            }
-            return p;
-        }));
+        const updatePhoto = (p: Photo) => ({
+            ...p,
+            preview: previewUrl,
+            editParams: editParams
+        });
+
+        // Update view
+        setPhotos(prev => prev.map(p => p.id === editingPhoto?.id ? updatePhoto(p) : p));
+
+        // Update selection and Auto-select
+        const newMap = new Map(selectedPhotosMap);
+        if (editingPhoto) {
+            newMap.set(editingPhoto.id, updatePhoto(editingPhoto));
+        }
+        setSelectedPhotosMap(newMap);
+
         setEditingPhoto(null);
     };
 
     // --- Submission ---
     const handleContinue = async () => {
-        const selectedCount = selectedIds.size;
+        const allSelectedPhotos = Array.from(selectedPhotosMap.values());
+        const selectedCount = allSelectedPhotos.length;
 
         if (selectedCount === 0) {
             alert('Debes seleccionar al menos una foto');
@@ -179,11 +225,10 @@ const KioskUploadView = ({ selectedSize, onPhotosUploaded, onBack }: KioskUpload
             }
         }
 
-        // Prepare files for backend (convert to Files/Blobs)
         setIsProcessing(true);
         try {
-            const finalPhotos = await Promise.all(photos.filter(p => selectedIds.has(p.id)).map(async p => {
-                // Ensure we have a real File object. same check as handleEditClick
+            // Hydrate all selected files (even those not in current view)
+            const finalPhotos = await Promise.all(allSelectedPhotos.map(async p => {
                 if (!p.file.size && (p.file as any).path) {
                     try {
                         const res = await fetch(p.preview);
@@ -192,8 +237,6 @@ const KioskUploadView = ({ selectedSize, onPhotosUploaded, onBack }: KioskUpload
                         return { ...p, file: newFile };
                     } catch (err) {
                         console.error("Failed to hydrate file for upload:", p.name, err);
-                        // If fail, we might return p but it will fail backend.
-                        // Let's return null and filter? Or throw?
                         throw err;
                     }
                 }
@@ -217,9 +260,15 @@ const KioskUploadView = ({ selectedSize, onPhotosUploaded, onBack }: KioskUpload
                     <button
                         onClick={() => {
                             if (viewState === 'gallery') {
-                                setViewState('drive_selection');
-                                setSelectedIds(new Set());
-                                setPhotos([]);
+                                // If inside a folder (history > 0), go back
+                                if (history.length > 0) {
+                                    handleNavigateBack();
+                                } else {
+                                    // Root -> Back to Drive Selection
+                                    setViewState('drive_selection');
+                                    setSelectedPhotosMap(new Map());
+                                    setPhotos([]);
+                                }
                             } else if (viewState === 'drive_selection') {
                                 setViewState('idle');
                                 setDrives([]);
@@ -230,15 +279,21 @@ const KioskUploadView = ({ selectedSize, onPhotosUploaded, onBack }: KioskUpload
                         className="flex items-center gap-2 text-[#2D3A52] hover:text-[#D75F1E] transition-colors duration-200 whitespace-nowrap"
                     >
                         <i className="ri-arrow-left-line text-xl"></i>
-                        <span className="text-lg font-medium">Volver</span>
+                        <span className="text-lg font-medium">
+                            {viewState === 'gallery' && history.length > 0 ? 'Subir Nivel' : 'Volver'}
+                        </span>
                     </button>
 
                     <div className="text-center flex-1">
                         <h1 className="text-3xl font-bold text-[#2D3A52] mb-2">Modo Kiosco</h1>
-                        <p className="text-lg text-[#2D3A52]/70">
+                        <p className="text-lg text-[#2D3A52]/70 overflow-hidden text-ellipsis whitespace-nowrap px-4">
                             {viewState === 'idle' && 'Selecciona el método de entrada'}
                             {viewState === 'drive_selection' && 'Selecciona la unidad USB'}
-                            {viewState === 'gallery' && 'Selecciona las fotos a imprimir'}
+                            {viewState === 'gallery' && (
+                                <span title={currentPath} className="font-mono text-base">
+                                    {currentPath}
+                                </span>
+                            )}
                         </p>
                     </div>
                     <div className="w-24"></div>
@@ -277,7 +332,7 @@ const KioskUploadView = ({ selectedSize, onPhotosUploaded, onBack }: KioskUpload
                         <div className="flex-1 flex flex-col items-center justify-center">
                             <div className="w-20 h-20 border-4 border-[#D75F1E] border-t-transparent rounded-full animate-spin mb-8"></div>
                             <h3 className="text-2xl font-bold text-[#2D3A52]">
-                                {viewState === 'scanning_drives' ? 'Buscando dispositivos...' : 'Escaneando fotos...'}
+                                {viewState === 'scanning_drives' ? 'Buscando dispositivos...' : 'Leyendo contenido...'}
                             </h3>
                         </div>
                     )}
@@ -309,25 +364,25 @@ const KioskUploadView = ({ selectedSize, onPhotosUploaded, onBack }: KioskUpload
                             {/* Toolbar */}
                             <div className="bg-[#F0F7FA] rounded-xl p-4 mb-6 flex items-center justify-between sticky top-0 z-20 shadow-sm border border-[#CEDFE7]">
                                 <div className="flex items-center gap-4">
-                                    <button onClick={selectAll} className="text-sm font-medium text-[#2D3A52] hover:text-[#D75F1E] flex items-center gap-1">
-                                        <i className="ri-checkbox-multiple-line"></i> Seleccionar Todas
+                                    <button onClick={selectAllInView} className="text-sm font-medium text-[#2D3A52] hover:text-[#D75F1E] flex items-center gap-1">
+                                        <i className="ri-checkbox-multiple-line"></i> Seleccionar Vista
                                     </button>
                                     <div className="w-px h-4 bg-[#CEDFE7]"></div>
                                     <button onClick={deselectAll} className="text-sm font-medium text-[#2D3A52] hover:text-[#D75F1E] flex items-center gap-1">
-                                        <i className="ri-checkbox-blank-line"></i> Deseleccionar
+                                        <i className="ri-checkbox-blank-line"></i> Limpiar Todo
                                     </button>
                                 </div>
 
                                 <div className="flex items-center gap-4">
                                     <span className="font-bold text-[#2D3A52] text-lg">
-                                        {selectedIds.size} <span className="font-normal text-sm text-[#2D3A52]/70">seleccionadas</span>
+                                        {selectedPhotosMap.size} <span className="font-normal text-sm text-[#2D3A52]/70">fotos</span>
                                     </span>
                                     <button
                                         onClick={handleContinue}
-                                        disabled={selectedIds.size === 0}
+                                        disabled={selectedPhotosMap.size === 0}
                                         className={`
                                     px-6 py-2 rounded-lg font-bold shadow-md transition-all flex items-center gap-2
-                                    ${selectedIds.size > 0
+                                    ${selectedPhotosMap.size > 0
                                                 ? 'bg-[#D75F1E] text-white hover:bg-[#D75F1E]/90 hover:scale-105'
                                                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'}
                                 `}
@@ -337,15 +392,43 @@ const KioskUploadView = ({ selectedSize, onPhotosUploaded, onBack }: KioskUpload
                                 </div>
                             </div>
 
-                            {/* Grid */}
-                            <div className="flex-1 bg-gray-50 rounded-2xl border border-[#CEDFE7] p-4 relative">
-                                <PhotoGrid
-                                    photos={photos}
-                                    selectedIds={selectedIds}
-                                    onToggleSelect={toggleSelect}
-                                    onEdit={handleEditClick}
-                                    showEditBadge={true}
-                                />
+                            {/* FOLDERS & GRID */}
+                            <div className="flex-1 bg-gray-50 rounded-2xl border border-[#CEDFE7] p-4 overflow-y-auto">
+                                {/* Folders Section */}
+                                {folders.length > 0 && (
+                                    <div className="mb-6">
+                                        <h4 className="text-sm font-semibold text-[#2D3A52]/70 mb-3 uppercase tracking-wider">Carpetas</h4>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                                            {folders.map((folder, idx) => (
+                                                <button
+                                                    key={idx}
+                                                    onClick={() => handleEnterFolder(folder.path)}
+                                                    className="flex flex-col items-center p-4 bg-white border border-[#CEDFE7] hover:border-[#D75F1E] rounded-xl hover:shadow-md transition-all group"
+                                                >
+                                                    <i className="ri-folder-3-fill text-4xl text-[#FFB020] group-hover:text-[#FFC040] mb-2"></i>
+                                                    <span className="text-sm font-medium text-[#2D3A52] text-center break-all line-clamp-2 leading-tight">
+                                                        {folder.name}
+                                                    </span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Photos Grid */}
+                                {photos.length > 0 ? (
+                                    <PhotoGrid
+                                        photos={photos}
+                                        selectedIds={selectedIds}
+                                        onToggleSelect={toggleSelect}
+                                        onEdit={handleEditClick}
+                                        showEditBadge={true}
+                                    />
+                                ) : (
+                                    <div className="text-center py-12 text-[#2D3A52]/50">
+                                        {folders.length === 0 ? 'Carpeta vacía' : 'No hay imágenes en este nivel'}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}

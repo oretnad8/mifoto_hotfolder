@@ -96,35 +96,71 @@ app.on('activate', function () {
     }
 });
 
-// Helper: List drives via PowerShell to avoid native dependencies
+// Helper: List drives via PowerShell Storage Module (Best for BusType)
 function getDrives() {
-    return new Promise((resolve, reject) => {
-        const cmd = `powershell -NoProfile -Command "Get-CimInstance Win32_LogicalDisk | Select-Object DeviceID, DriveType, VolumeName | ConvertTo-Json"`;
-        exec(cmd, (error, stdout, stderr) => {
+    return new Promise((resolve) => {
+        // We use Get-Partition + Get-Disk to find the TRUE BusType (USB vs SATA/SCSI)
+        // script must be COMMENT FREE to avoid parsing errors
+        const psScript = `
+            $out = @();
+            $logicals = Get-CimInstance Win32_LogicalDisk | Where-Object { $_.DriveType -eq 2 -or $_.DriveType -eq 3 };
+            foreach ($l in $logicals) {
+                $bus = "UNKNOWN";
+                try {
+                    $letter = $l.DeviceID.Substring(0,1);
+                    $disk = Get-Partition -DriveLetter $letter -ErrorAction SilentlyContinue | Get-Disk -ErrorAction SilentlyContinue;
+                    if ($disk) { 
+                        $bus = $disk.BusType.ToString();
+                    }
+                } catch {
+                }
+                
+                $out += @{ 
+                    DeviceID = $l.DeviceID; 
+                    DriveType = $l.DriveType; 
+                    VolumeName = $l.VolumeName; 
+                    BusType = $bus 
+                };
+            }
+            $out | ConvertTo-Json -Depth 2
+        `;
+
+        // Sanitize command
+        const safeCommand = psScript.replace(/\s+/g, ' ').trim();
+        const cmd = `powershell -NoProfile -Command "& { ${safeCommand} }"`;
+
+        exec(cmd, { maxBuffer: 1024 * 1024 }, (error, stdout, stderr) => {
             if (error) {
                 console.error("PowerShell error:", error);
-                resolve([]); // Fail gracefully
+                resolve([]);
                 return;
             }
             try {
-                // Parse JSON output. Note: PowerShell might return a single object or array.
-                let drives = JSON.parse(stdout);
-                if (!Array.isArray(drives)) {
-                    drives = [drives];
-                }
+                const raw = JSON.parse(stdout);
+                const drives = Array.isArray(raw) ? raw : (raw ? [raw] : []);
 
-                // Map to a simplified structure similar to drivelist for frontend compatibility
-                const mapped = drives.map(d => ({
-                    mountpoints: [{ path: d.DeviceID + '\\' }], // Add trailing slash consistent with Windows
-                    isRemovable: d.DriveType === 2, // 2 = Removable
-                    isUSB: d.DriveType === 2,       // Assumption for simplicity
-                    isSystem: d.DeviceID === 'C:',
-                    label: d.VolumeName || 'Sin Nombre'
-                }));
+                const mapped = drives.map(d => {
+                    const driveLetter = d.DeviceID;
+                    const isRemovableType = d.DriveType === 2;
+
+                    // BusType check (Robust)
+                    const bus = (d.BusType || '').toUpperCase();
+                    const isUsbBus = bus === 'USB';
+
+                    return {
+                        mountpoints: [{ path: driveLetter + '\\' }],
+                        isRemovable: isRemovableType || isUsbBus,
+                        isUSB: isUsbBus,
+                        isSystem: driveLetter.toUpperCase() === 'C:',
+                        label: d.VolumeName || 'Sin Nombre',
+                        _debugType: d.DriveType,
+                        _debugBus: d.BusType
+                    };
+                });
 
                 resolve(mapped);
             } catch (e) {
-                console.error("Error parsing drive JSON:", e);
+                console.error("Error parsing drive JSON:", e, stdout);
                 resolve([]);
             }
         });
@@ -135,10 +171,17 @@ function getDrives() {
 ipcMain.handle('get-removable-drives', async () => {
     try {
         const drives = await getDrives();
-        // Filter for removable or non-system drives that are likely external (Type 2 is Removable, Type 3 is Local but could be External HDD)
-        // We strictly look for Type 2 or anything not C: if we want to be generous?
-        // Let's stick to isRemovable (Type 2) OR (Type 3 and NOT C:)
-        const removable = drives.filter(drive => drive.isRemovable || (drive.mountpoints[0].path !== 'C:\\'));
+
+        // Strict Filter:
+        // 1. MUST NOT be C:
+        // 2. MUST be either Removable Type (2) OR BusType USB
+        const removable = drives.filter(drive =>
+            !drive.isSystem &&
+            (drive.isRemovable === true)
+        );
+
+        console.log("Detected Drives:", JSON.stringify(drives, null, 2));
+        console.log("Filtered Removable:", JSON.stringify(removable, null, 2));
 
         return { success: true, drives: removable };
     } catch (error) {
@@ -147,50 +190,57 @@ ipcMain.handle('get-removable-drives', async () => {
     }
 });
 
-// Helper for recursive scanning
-function scanDir(dir, depth = 0, maxDepth = 3, filesList = []) {
-    if (depth > maxDepth) return filesList;
+// Helper for NON-recursive scanning (Single folder level)
+function scanDir(dir) {
+    const response = {
+        path: dir,
+        folders: [],
+        files: []
+    };
 
     try {
         const list = fs.readdirSync(dir, { withFileTypes: true });
 
         for (const entry of list) {
             const fullPath = path.join(dir, entry.name);
+            const normalizedPath = fullPath.replace(/\\/g, '/');
 
             if (entry.isDirectory()) {
-                // Ignore hidden folders or system folders to speed up
-                if (!entry.name.startsWith('.') && entry.name !== '$RECYCLE.BIN' && entry.name !== 'System Volume Information') {
-                    scanDir(fullPath, depth + 1, maxDepth, filesList);
+                // Ignore hidden folders or system folders
+                if (!entry.name.startsWith('.') &&
+                    entry.name !== '$RECYCLE.BIN' &&
+                    entry.name !== 'System Volume Information') {
+
+                    response.folders.push({
+                        name: entry.name,
+                        path: fullPath
+                    });
                 }
             } else {
                 if (/\.(jpg|jpeg|png|heic)$/i.test(entry.name)) {
-                    // NORMALIZE PATH: Convert backslashes to forward slashes for URL
-                    const normalizedPath = fullPath.replace(/\\/g, '/');
-
-                    filesList.push({
+                    response.files.push({
                         name: entry.name,
-                        path: fullPath, // Keep original OS path for logic if needed
-                        // Use dummy host 'resource' so browser respects the drive letter path
+                        path: fullPath,
                         preview: `local-media://resource/${normalizedPath}`
                     });
                 }
             }
         }
     } catch (e) {
-        // Ignore access errors
+        console.error(`Error reading dir ${dir}:`, e);
     }
-    return filesList;
+    return response;
 }
 
 // IPC: Scan Directory
 ipcMain.handle('scan-directory', async (event, rootPath) => {
     console.log('Scanning directory:', rootPath);
     try {
-        // If rootPath provides a mount path like "E:\" ensure it ends correctly
-        // But fs.readdirSync("E:") might work depending on CWD. "E:/" is safer or "E:\\"
+        // Ensure request is valid
+        if (!rootPath) throw new Error("Path is required");
 
-        const images = scanDir(rootPath);
-        return { success: true, files: images };
+        const result = scanDir(rootPath);
+        return { success: true, ...result };
     } catch (error) {
         console.error('Error scanning directory:', error);
         return { success: false, error: error.message };
@@ -200,19 +250,26 @@ ipcMain.handle('scan-directory', async (event, rootPath) => {
 // IPC: Get Local IP
 ipcMain.handle('get-local-ip', async () => {
     const interfaces = os.networkInterfaces();
-    let ip = '';
+    const candidates = [];
 
-    // Iterate over interfaces to find the first non-internal IPv4
+    // Collect all valid IPv4 non-internal addresses
     for (const name of Object.keys(interfaces)) {
         for (const iface of interfaces[name]) {
             // Skip internal (localhost) and non-IPv4
             if (iface.family === 'IPv4' && !iface.internal) {
-                // Return the first valid one we find
-                return iface.address;
+                candidates.push({ name, address: iface.address });
             }
         }
     }
-    return null;
+
+    if (candidates.length === 0) return null;
+
+    // 1. Try to find a Wireless/Wi-Fi interface
+    const wifiCandidate = candidates.find(c => /wi-fi|wireless|wlan/i.test(c.name));
+    if (wifiCandidate) return wifiCandidate.address;
+
+    // 2. Fallback to the first available candidate
+    return candidates[0].address;
 });
 
 // Deprecated mock handler, keeping for fallback if needed but replacing 'scan-usb' functionality

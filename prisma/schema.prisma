@@ -20,4 +20,5 @@ model Order {
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   @@map("orders")
+  @@index([createdAt])
 }

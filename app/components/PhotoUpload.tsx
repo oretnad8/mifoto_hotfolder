@@ -202,7 +202,7 @@ const PhotoUpload = ({ selectedSize, onPhotosUploaded, onBack }: PhotoUploadProp
 
           <div className="text-center flex-1">
             <h1 className="text-3xl font-bold text-[#2D3A52] mb-2">Carga tus Fotos</h1>
-            <p className="text-lg text-[#2D3A52]/70">Arrastra o selecciona las imágenes que deseas imprimir</p>
+            <p className="text-lg text-[#2D3A52]/70">Selecciona los recuerdos desde tu Galería</p>
           </div>
 
           <div className="w-24"></div>

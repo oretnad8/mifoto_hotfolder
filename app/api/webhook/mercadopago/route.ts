@@ -1,56 +1,56 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import { MercadoPagoConfig, Payment } from 'mercadopago';
 import { prisma } from '@/lib/db';
-import { moveOrderFilesToHotFolder } from '@/lib/file-service';
 
-// Mock function to fetch payment from MP (requires Access Token)
-// In a real app, use 'mercadopago' SDK
-async function getPaymentFromMercadoPago(paymentId: string) {
-    // Placeholder: return a mock or fetch if token exists
-    // Returning dummy data for now as logic structure
-    return {
-        status: 'approved',
-        external_reference: null // This usually comes from MP
-    };
-}
+const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN! });
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
     try {
-        const body = await request.json();
-        // MP sends { type: 'payment', data: { id: '...' } }
-
-        // If query param has 'topic' or 'type'
         const url = new URL(request.url);
-        const topic = url.searchParams.get('topic') || body?.type;
-        const paymentId = url.searchParams.get('id') || body?.data?.id;
+        const searchParams = url.searchParams;
+        const topic = searchParams.get('topic') || searchParams.get('type');
 
-        if (topic === 'payment' && paymentId) {
-            // Here we would fetch the payment status from MP API
-            // const payment = await mercadopago.payment.findById(paymentId);
+        // Mercado Pago sends data in query params for some webhooks or body for others
+        // Usually v2 uses body but let's handle body primarily
+        const body = await request.json().catch(() => ({}));
 
-            // For this implementation, I will assume the 'external_reference' 
-            // is passed in the URL (if notification_url was set with ?orderId=...)
-            // OR we'll trust the logic that if we get a payment notification, we try to match it.
+        const { action, data, type } = body;
+        const id = data?.id || searchParams.get('data.id') || searchParams.get('id');
 
-            // NOTE: Without MP Access Token, we cannot verify the payment status securely.
-            // Strategy: Look for orderId in query params if the user sets notification_url to /api/webhook/mercadopago?orderId=...
+        console.log('Webhook received:', { action, type, id, topic });
 
-            const orderId = url.searchParams.get('source_news'); // unlikely
+        // Check if it's a payment notification
+        if (type === 'payment' || topic === 'payment' || action === 'payment.updated' || action === 'payment.created') {
+            if (!id) {
+                return NextResponse.json({ error: 'No ID found' }, { status: 400 });
+            }
 
-            // Let's rely on query param 'orderId' if the frontend sets it in the preference 'notification_url'
-            const externalRef = url.searchParams.get('external_reference');
+            const payment = new Payment(client);
+            const paymentData = await payment.get({ id: id });
 
-            if (externalRef) {
-                await prisma.order.update({
-                    where: { id: externalRef },
-                    data: { status: 'paid', paymentReference: paymentId.toString() }
-                });
-                await moveOrderFilesToHotFolder(externalRef);
-            } else {
-                console.log('Webhook received but no external_reference found (requires MP SDK integration)');
+            console.log('Payment Data Status:', paymentData.status);
+
+            if (paymentData.status === 'approved') {
+                const metadata = paymentData.metadata as any;
+                const orderId = metadata.order_id; // Mercado Pago converts metadata keys to snake_case
+
+                if (orderId) {
+                    await prisma.order.update({
+                        where: { id: orderId },
+                        data: {
+                            status: 'paid', // Update status to paid
+                            paymentMethod: 'mercadopago',
+                            paymentReference: String(id),
+                        },
+                    });
+                    console.log(`Order ${orderId} updated to paid`);
+                } else {
+                    console.warn('No order_id in metadata');
+                }
             }
         }
 
-        return NextResponse.json({ status: 'ok' });
+        return NextResponse.json({ success: true });
     } catch (error) {
         console.error('Webhook error:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

@@ -42,8 +42,14 @@ const FinalCode = ({ orderData, onNewOrder }: FinalCodeProps) => {
       <div className="max-w-4xl mx-auto text-center">
         {/* Header de éxito limpio */}
         <div className="mb-12">
-          <h1 className="text-4xl font-bold text-[#2D3A52] mb-4">¡Gracias por tu Compra!</h1>
-          <p className="text-xl text-[#2D3A52]/70">Tu pago ha sido procesado exitosamente</p>
+          <h1 className="text-4xl font-bold text-[#2D3A52] mb-4">
+            {orderData.paymentMethod === 'mercadopago' ? '¡Gracias por tu Compra!' : '¡Pedido Registrado!'}
+          </h1>
+          <p className="text-xl text-[#2D3A52]/70">
+            {orderData.paymentMethod === 'mercadopago'
+              ? 'Tu pago ha sido procesado exitosamente'
+              : 'Acércate a caja para completar tu pago'}
+          </p>
         </div>
 
         {/* Código de orden principal con ticket verde discreto */}
@@ -63,28 +69,53 @@ const FinalCode = ({ orderData, onNewOrder }: FinalCodeProps) => {
           </div>
 
           {/* Instrucciones importantes arriba */}
-          <div className="bg-green-50 border-2 border-green-200 rounded-2xl p-6">
+          <div className={`${orderData.paymentMethod === 'mercadopago' ? 'bg-green-50 border-green-200' : 'bg-orange-50 border-[#D75F1E]/20'} border-2 rounded-2xl p-6`}>
             <div className="flex items-start gap-3">
-              <i className="ri-information-line text-green-600 text-2xl mt-1"></i>
+              <i className={`${orderData.paymentMethod === 'mercadopago' ? 'ri-information-line text-green-600' : 'ri-store-2-line text-[#D75F1E]'} text-2xl mt-1`}></i>
               <div className="text-left">
-                <h3 className="text-lg font-bold text-green-800 mb-3">¡Tu pedido está confirmado!</h3>
-                <ul className="space-y-2 text-sm text-green-700">
-                  <li className="flex items-start gap-2">
-                    <i className="ri-arrow-right-line mt-0.5"></i>
-                    <span>Tu pago ha sido procesado exitosamente</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <i className="ri-arrow-right-line mt-0.5"></i>
-                    <span>Espera frente al equipo para recoger tus fotos</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <i className="ri-arrow-right-line mt-0.5"></i>
-                    <span>Tus fotos estarán listas dentro de minutos!</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <i className="ri-arrow-right-line mt-0.5"></i>
-                    <span>Guarda este código hasta recoger tu pedido</span>
-                  </li>
+                <h3 className={`${orderData.paymentMethod === 'mercadopago' ? 'text-green-800' : 'text-[#D75F1E]'} text-lg font-bold mb-3`}>
+                  {orderData.paymentMethod === 'mercadopago' ? '¡Tu pedido está confirmado!' : '¡Pedido Creado Exitosamente!'}
+                </h3>
+                <ul className={`space-y-2 text-sm ${orderData.paymentMethod === 'mercadopago' ? 'text-green-700' : 'text-[#2D3A52]/80'}`}>
+                  {orderData.paymentMethod === 'mercadopago' ? (
+                    <>
+                      <li className="flex items-start gap-2">
+                        <i className="ri-arrow-right-line mt-0.5"></i>
+                        <span>Tu pago ha sido procesado exitosamente</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <i className="ri-arrow-right-line mt-0.5"></i>
+                        <span>Espera frente al equipo para recoger tus fotos</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <i className="ri-arrow-right-line mt-0.5"></i>
+                        <span>Tus fotos estarán listas dentro de minutos!</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <i className="ri-arrow-right-line mt-0.5"></i>
+                        <span>Guarda este código hasta recoger tu pedido</span>
+                      </li>
+                    </>
+                  ) : (
+                    <>
+                      <li className="flex items-start gap-2">
+                        <i className="ri-arrow-right-line mt-0.5"></i>
+                        <span>Indica tu nombre y número de orden en la caja</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <i className="ri-arrow-right-line mt-0.5"></i>
+                        <span>Paga en efectivo o con Tarjeta</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <i className="ri-arrow-right-line mt-0.5"></i>
+                        <span>Espera frente al equipo para recoger tus fotos</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <i className="ri-arrow-right-line mt-0.5"></i>
+                        <span>Tus fotos estarán listas dentro de minutos!</span>
+                      </li>
+                    </>
+                  )}
                 </ul>
               </div>
             </div>
@@ -114,7 +145,9 @@ const FinalCode = ({ orderData, onNewOrder }: FinalCodeProps) => {
 
               <div className="flex justify-between items-center py-2 border-b border-white/50">
                 <span className="text-[#2D3A52]/70">Estado:</span>
-                <span className="font-semibold text-green-600">PAGADO</span>
+                <span className={`font-semibold ${orderData.paymentMethod === 'mercadopago' ? 'text-green-600' : 'text-orange-600'}`}>
+                  {orderData.paymentMethod === 'mercadopago' ? 'PAGADO' : 'PENDIENTE DE PAGO'}
+                </span>
               </div>
 
               <div className="flex justify-between items-center py-2 border-b border-white/50">
@@ -175,10 +208,12 @@ const FinalCode = ({ orderData, onNewOrder }: FinalCodeProps) => {
               </div>
 
               <div className="flex items-center gap-3 p-3 bg-white/60 rounded-lg">
-                <i className="ri-check-double-line text-[#D75F1E] text-xl"></i>
+                <i className={`${orderData.paymentMethod === 'mercadopago' ? 'ri-check-double-line' : 'ri-time-line'} text-[#D75F1E] text-xl`}></i>
                 <div>
                   <p className="font-medium text-[#2D3A52]">Estado del pago</p>
-                  <p className="text-sm text-green-600 font-semibold">Confirmado y procesado</p>
+                  <p className={`text-sm font-semibold ${orderData.paymentMethod === 'mercadopago' ? 'text-green-600' : 'text-orange-600'}`}>
+                    {orderData.paymentMethod === 'mercadopago' ? 'Confirmado y procesado' : 'Pendiente de pago en caja'}
+                  </p>
                 </div>
               </div>
 

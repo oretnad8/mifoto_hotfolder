@@ -6,17 +6,36 @@ import { Order } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
 
-export default async function AdminPage() {
-    // Fetch ALL orders to ensure we see everything
+// @ts-ignore
+export default async function AdminPage({
+    searchParams,
+}: {
+    searchParams?: { page?: string };
+}) {
+    // Resolve searchParams (it can be a Promise in newer Next.js versions)
+    // @ts-ignore
+    const params = await searchParams;
+
+    const page = Number(params?.page) || 1;
+    const pageSize = 50;
+    const skip = (page - 1) * pageSize;
+
+    // Fetch orders with pagination
     const allOrders: Order[] = await prisma.order.findMany({
         orderBy: {
             createdAt: 'desc',
         },
+        take: pageSize,
+        skip: skip,
     });
+
+    // Get total count for pagination info
+    const totalOrders = await prisma.order.count();
+    const totalPages = Math.ceil(totalOrders / pageSize);
 
     return (
         <div className="min-h-screen bg-white text-[#2D3A52] p-8">
-            <AutoRefresh intervalMs={5000} />
+            <AutoRefresh intervalMs={30000} /> {/* Increased interval to avoid pagination jank */}
             <div className="max-w-7xl mx-auto">
                 <header className="flex justify-between items-center mb-10">
                     <div>
@@ -27,8 +46,9 @@ export default async function AdminPage() {
                     </div>
                     <div className="flex items-center gap-4">
                         <PrinterStatusWidget />
-                        <div className="bg-gradient-to-r from-[#CEDFE7] to-[#FCF4F3] px-6 py-3 rounded-2xl border border-white/50 text-sm shadow-sm">
-                            Total Órdenes: <span className="font-bold text-[#D75F1E] text-lg ml-1">{allOrders.length}</span>
+                        <div className="bg-gradient-to-r from-[#CEDFE7] to-[#FCF4F3] px-6 py-3 rounded-2xl border border-white/50 text-sm shadow-sm text-right">
+                            <div>Total Órdenes: <span className="font-bold text-[#D75F1E] text-lg ml-1">{totalOrders}</span></div>
+                            <div className="text-xs text-[#2D3A52]/60">Página {page} de {totalPages}</div>
                         </div>
                     </div>
                 </header>
@@ -60,7 +80,8 @@ export default async function AdminPage() {
                                     <tbody className="divide-y divide-[#2D3A52]/10">
                                         {allOrders.map((order) => {
                                             const client = order.client as any;
-                                            const isPendingTransfer = order.status === 'pending' && order.paymentMethod === 'transfer';
+                                            // Allow validation for both legacy 'transfer' and new 'cash' (Pay at Counter) methods
+                                            const isPendingPayment = order.status === 'pending' && (order.paymentMethod === 'transfer' || order.paymentMethod === 'cash');
                                             const items = (order.items as any[]) || [];
 
                                             return (
@@ -78,10 +99,13 @@ export default async function AdminPage() {
                                                     </td>
                                                     <td className="p-6">
                                                         <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold capitalize
-                                                            ${order.paymentMethod === 'transfer'
+                                                            ${order.paymentMethod === 'transfer' || order.paymentMethod === 'cash'
                                                                 ? 'bg-[#D75F1E]/10 text-[#D75F1E]'
                                                                 : 'bg-[#2D3A52]/10 text-[#2D3A52]'}`}>
-                                                            {order.paymentMethod === 'transfer' ? 'Transferencia' : order.paymentMethod}
+                                                            {order.paymentMethod === 'transfer' ? 'Transferencia' :
+                                                                order.paymentMethod === 'cash' ? 'Pago en Caja' :
+                                                                    order.paymentMethod === 'mercadopago' ? 'Mercado Pago' :
+                                                                        order.paymentMethod}
                                                         </span>
                                                     </td>
                                                     <td className="p-6">
@@ -103,7 +127,7 @@ export default async function AdminPage() {
                                                         ${order.total.toLocaleString('es-CL')}
                                                     </td>
                                                     <td className="p-6 text-right">
-                                                        {isPendingTransfer ? (
+                                                        {isPendingPayment ? (
                                                             <ValidateButton orderId={order.id} />
                                                         ) : (
                                                             <span className="inline-flex items-center gap-1 text-xs font-medium text-[#2D3A52]/40 bg-[#2D3A52]/5 px-3 py-1 rounded-full">
@@ -119,6 +143,29 @@ export default async function AdminPage() {
                                 </table>
                             </div>
                         </div>
+                    )}
+                </div>
+
+                {/* Pagination Controls */}
+                <div className="mt-8 flex justify-center gap-4">
+                    {page > 1 && (
+                        <a
+                            href={`/admin?page=${page - 1}`}
+                            className="bg-white border border-[#2D3A52]/20 text-[#2D3A52] px-6 py-3 rounded-xl font-bold hover:bg-[#2D3A52]/5 transition-colors"
+                        >
+                            <i className="ri-arrow-left-line mr-2"></i>
+                            Anterior
+                        </a>
+                    )}
+
+                    {page < totalPages && (
+                        <a
+                            href={`/admin?page=${page + 1}`}
+                            className="bg-[#D75F1E] text-white px-6 py-3 rounded-xl font-bold hover:bg-[#D75F1E]/90 transition-colors shadow-lg"
+                        >
+                            Siguiente
+                            <i className="ri-arrow-right-line ml-2"></i>
+                        </a>
                     )}
                 </div>
             </div>

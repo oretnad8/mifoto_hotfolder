@@ -11,9 +11,50 @@ interface PaymentProps {
 
 const Payment = ({ orderData, onPaymentSuccess, onBack }: PaymentProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('card');
+  const [paymentMethod, setPaymentMethod] = useState('mercadopago');
+
+  const handleMercadoPagoPayment = async () => {
+    setIsProcessing(true);
+    try {
+      const response = await fetch('/api/mercadopago/create-preference', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: orderData.items.map(item => ({
+            id: item.size.id,
+            title: `Impresión ${item.size.name} (${item.size.dimensions})`,
+            quantity: item.totalPhotos,
+            unit_price: item.subtotal / item.totalPhotos,
+          })),
+          metadata: {
+            orderId: orderData.id,
+            customerName: orderData.customerName,
+          }
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.init_point) {
+        window.location.href = data.init_point;
+      } else {
+        console.error('No init_point returned', data);
+        setIsProcessing(false);
+      }
+    } catch (error) {
+      console.error('Error creating preference:', error);
+      setIsProcessing(false);
+    }
+  };
 
   const handlePayment = async () => {
+    if (paymentMethod === 'mercadopago') {
+      await handleMercadoPagoPayment();
+      return;
+    }
+
     setIsProcessing(true);
 
     // Simular procesamiento de pago
@@ -21,8 +62,8 @@ const Payment = ({ orderData, onPaymentSuccess, onBack }: PaymentProps) => {
       setIsProcessing(false);
       const paidOrder = {
         ...orderData,
-        status: paymentMethod === 'transfer' ? 'pending' : 'paid',
-        paidAt: paymentMethod === 'transfer' ? undefined : new Date(),
+        status: paymentMethod === 'cash' ? 'pending' : 'paid',
+        paidAt: paymentMethod === 'cash' ? undefined : new Date(),
         paymentMethod: paymentMethod
       };
       onPaymentSuccess(paidOrder);
@@ -60,139 +101,93 @@ const Payment = ({ orderData, onPaymentSuccess, onBack }: PaymentProps) => {
               {/* Selector de método de pago */}
               <div className="space-y-4 mb-8">
                 <div
-                  className={`p-4 rounded-xl cursor-pointer transition-all duration-200 ${paymentMethod === 'card'
+                  className={`p-4 rounded-xl cursor-pointer transition-all duration-200 ${paymentMethod === 'cash'
                     ? 'bg-white ring-4 ring-[#D75F1E] shadow-lg'
                     : 'bg-white/80 hover:bg-white hover:shadow-md'
                     }`}
-                  onClick={() => setPaymentMethod('card')}
+                  onClick={() => setPaymentMethod('cash')}
                 >
                   <div className="flex items-center gap-4">
-                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'card'
+                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'cash'
                       ? 'border-[#D75F1E] bg-[#D75F1E]'
                       : 'border-gray-300'
                       }`}>
-                      {paymentMethod === 'card' && (
+                      {paymentMethod === 'cash' && (
                         <i className="ri-check-line text-white text-sm"></i>
                       )}
                     </div>
                     <div className="flex items-center gap-3">
-                      <i className="ri-bank-card-line text-2xl text-[#2D3A52]"></i>
+                      <i className="ri-store-2-line text-2xl text-[#2D3A52]"></i>
                       <div>
-                        <h4 className="font-semibold text-[#2D3A52]">Tarjeta de Crédito/Débito</h4>
-                        <p className="text-sm text-[#2D3A52]/70">Visa, Mastercard, American Express</p>
+                        <h4 className="font-semibold text-[#2D3A52]">Pagar en Caja</h4>
+                        <p className="text-sm text-[#2D3A52]/70">Efectivo o Tarjeta presencial</p>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 <div
-                  className={`p-4 rounded-xl cursor-pointer transition-all duration-200 ${paymentMethod === 'transfer'
+                  className={`p-4 rounded-xl cursor-pointer transition-all duration-200 ${paymentMethod === 'mercadopago'
                     ? 'bg-white ring-4 ring-[#D75F1E] shadow-lg'
                     : 'bg-white/80 hover:bg-white hover:shadow-md'
                     }`}
-                  onClick={() => setPaymentMethod('transfer')}
+                  onClick={() => setPaymentMethod('mercadopago')}
                 >
                   <div className="flex items-center gap-4">
-                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'transfer'
+                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'mercadopago'
                       ? 'border-[#D75F1E] bg-[#D75F1E]'
                       : 'border-gray-300'
                       }`}>
-                      {paymentMethod === 'transfer' && (
+                      {paymentMethod === 'mercadopago' && (
                         <i className="ri-check-line text-white text-sm"></i>
                       )}
                     </div>
                     <div className="flex items-center gap-3">
-                      <i className="ri-bank-line text-2xl text-[#2D3A52]"></i>
+                      <i className="ri-hand-coin-line text-2xl text-[#2D3A52]"></i>
                       <div>
-                        <h4 className="font-semibold text-[#2D3A52]">Transferencia Bancaria</h4>
-                        <p className="text-sm text-[#2D3A52]/70">Banco de Chile, BCI, Santander</p>
+                        <h4 className="font-semibold text-[#2D3A52]">Mercado Pago</h4>
+                        <p className="text-sm text-[#2D3A52]/70">Tarjetas, Saldo Mercado Pago</p>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Formulario de tarjeta */}
-              {paymentMethod === 'card' && (
-                <div className="bg-white/60 rounded-xl p-6 space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-[#2D3A52] mb-2">
-                      Número de Tarjeta
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="1234 5678 9012 3456"
-                      className="w-full px-4 py-3 bg-white rounded-lg border-2 border-transparent focus:border-[#D75F1E] focus:outline-none text-sm"
-                      disabled={isProcessing}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-[#2D3A52] mb-2">
-                        Fecha de Vencimiento
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="MM/AA"
-                        className="w-full px-4 py-3 bg-white rounded-lg border-2 border-transparent focus:border-[#D75F1E] focus:outline-none text-sm"
-                        disabled={isProcessing}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-[#2D3A52] mb-2">
-                        CVV
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="123"
-                        className="w-full px-4 py-3 bg-white rounded-lg border-2 border-transparent focus:border-[#D75F1E] focus:outline-none text-sm"
-                        disabled={isProcessing}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-[#2D3A52] mb-2">
-                      Nombre del Titular
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Como aparece en la tarjeta"
-                      className="w-full px-4 py-3 bg-white rounded-lg border-2 border-transparent focus:border-[#D75F1E] focus:outline-none text-sm"
-                      disabled={isProcessing}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Información de transferencia */}
-              {paymentMethod === 'transfer' && (
+              {/* Información de Pagar en Caja */}
+              {paymentMethod === 'cash' && (
                 <div className="bg-white/60 rounded-xl p-6">
                   <div className="text-center mb-4">
                     <div className="w-16 h-16 bg-[#D75F1E]/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <i className="ri-information-line text-[#D75F1E] text-2xl"></i>
+                      <i className="ri-store-2-line text-[#D75F1E] text-2xl"></i>
                     </div>
-                    <h4 className="font-semibold text-[#2D3A52] mb-2">Datos para Transferencia</h4>
-                    <p className="text-sm text-[#2D3A52]/70">Realiza la transferencia con los siguientes datos:</p>
+                    <h4 className="font-semibold text-[#2D3A52] mb-2">Instrucciones de Pago</h4>
+                    <p className="text-sm text-[#2D3A52]/70">Sigue estos pasos para completar tu orden:</p>
                   </div>
 
-                  <div className="space-y-3 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-[#2D3A52]/70">Banco:</span>
-                      <span className="font-medium text-[#2D3A52]">Banco de Chile</span>
+                  <div className="space-y-4 text-sm mt-6">
+                    <div className="flex items-start gap-4">
+                      <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shrink-0 border border-gray-200 font-bold text-[#D75F1E]">
+                        1
+                      </div>
+                      <p className="text-[#2D3A52] pt-1">
+                        Dirígete a la caja y menciona que deseas pagar tu orden actual.
+                      </p>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-[#2D3A52]/70">Cuenta:</span>
-                      <span className="font-medium text-[#2D3A52]">12345678-9</span>
+                    <div className="flex items-start gap-4">
+                      <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shrink-0 border border-gray-200 font-bold text-[#D75F1E]">
+                        2
+                      </div>
+                      <p className="text-[#2D3A52] pt-1">
+                        Realiza el pago con <span className="font-bold">Efectivo</span> o <span className="font-bold">Tarjeta</span>.
+                      </p>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-[#2D3A52]/70">RUT:</span>
-                      <span className="font-medium text-[#2D3A52]">76.123.456-7</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-[#2D3A52]/70">Nombre:</span>
-                      <span className="font-medium text-[#2D3A52]">MiFoto SpA</span>
+                    <div className="flex items-start gap-4">
+                      <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shrink-0 border border-gray-200 font-bold text-[#D75F1E]">
+                        3
+                      </div>
+                      <p className="text-[#2D3A52] pt-1">
+                        El operador validará tu pago y la impresión comenzará automáticamente.
+                      </p>
                     </div>
                   </div>
                 </div>
