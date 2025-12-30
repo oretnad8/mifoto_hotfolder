@@ -1,0 +1,77 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "BluetoothServer/1.0.0": {
+        "dependencies": {
+          "InTheHand.Net.Bluetooth": "4.1.43"
+        },
+        "runtime": {
+          "BluetoothServer.dll": {}
+        }
+      },
+      "InTheHand.Net.Bluetooth/4.1.43": {
+        "dependencies": {
+          "Linux.Bluetooth": "5.66.0"
+        },
+        "runtime": {
+          "lib/net7.0/InTheHand.Net.Bluetooth.dll": {
+            "assemblyVersion": "4.1.0.0",
+            "fileVersion": "4.1.43.0"
+          }
+        }
+      },
+      "Linux.Bluetooth/5.66.0": {
+        "dependencies": {
+          "Tmds.DBus": "0.15.0"
+        },
+        "runtime": {
+          "lib/netstandard2.0/Linux.Bluetooth.dll": {
+            "assemblyVersion": "5.66.0.0",
+            "fileVersion": "5.66.0.0"
+          }
+        }
+      },
+      "Tmds.DBus/0.15.0": {
+        "runtime": {
+          "lib/net6.0/Tmds.DBus.dll": {
+            "assemblyVersion": "0.15.0.0",
+            "fileVersion": "0.15.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "BluetoothServer/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "InTheHand.Net.Bluetooth/4.1.43": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-yMBKH9FJaV/W8DdqUVzz18lhCLppKYjH1aBeS9rNtSbEEU1nAmidFWV8RE3GLJ2d7V31vOCadhVYfcmShde6Pw==",
+      "path": "inthehand.net.bluetooth/4.1.43",
+      "hashPath": "inthehand.net.bluetooth.4.1.43.nupkg.sha512"
+    },
+    "Linux.Bluetooth/5.66.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-psisT3X/CjSGdKCHLb2IzcYGFSCp8q/yZKJLp0X8Fzaeb0MQHkHURpzltBsDOXbuABZ2qWW1i3oaqfkCfTPxwg==",
+      "path": "linux.bluetooth/5.66.0",
+      "hashPath": "linux.bluetooth.5.66.0.nupkg.sha512"
+    },
+    "Tmds.DBus/0.15.0": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-11BxHGh+8hwXNdcavX7BxNW5Qr6AC36ABYDcqvZ3bDS7alXI+O95/x0ExoVWWWxjAVTnvmDRtW1Nd3uObPIsVg==",
+      "path": "tmds.dbus/0.15.0",
+      "hashPath": "tmds.dbus.0.15.0.nupkg.sha512"
+    }
+  }
+}

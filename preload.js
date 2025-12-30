@@ -7,6 +7,11 @@ contextBridge.exposeInMainWorld('electron', {
     scanDirectory: (path) => ipcRenderer.invoke('scan-directory', path),
     getLocalIp: () => ipcRenderer.invoke('get-local-ip'),
 
+    // Bluetooth Bridge
+    startBluetooth: () => ipcRenderer.invoke('bluetooth-start-listening'),
+    stopBluetooth: () => ipcRenderer.invoke('bluetooth-stop-listening'),
+    openBluetoothWizard: () => ipcRenderer.invoke('bluetooth-open-wizard'),
+
     // Backward compatibility / Generic
     invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args),
     on: (channel, func) => {

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Photo, Size } from '../types';
 import ImageEditorModal from './ImageEditorModal';
 import PhotoGrid from './PhotoGrid';
+import BluetoothUploadView from './BluetoothUploadView';
 
 interface KioskUploadViewProps {
     selectedSize: Size | null;
@@ -19,7 +20,7 @@ type Drive = {
 };
 
 // States: 'idle' | 'scanning_drives' | 'drive_selection' | 'scanning_files' | 'gallery'
-type ViewState = 'idle' | 'scanning_drives' | 'drive_selection' | 'scanning_files' | 'gallery';
+type ViewState = 'idle' | 'scanning_drives' | 'drive_selection' | 'scanning_files' | 'gallery' | 'bluetooth';
 
 const KioskUploadView = ({ selectedSize, onPhotosUploaded, onBack }: KioskUploadViewProps) => {
     const [viewState, setViewState] = useState<ViewState>('idle');
@@ -269,7 +270,7 @@ const KioskUploadView = ({ selectedSize, onPhotosUploaded, onBack }: KioskUpload
                                     setSelectedPhotosMap(new Map());
                                     setPhotos([]);
                                 }
-                            } else if (viewState === 'drive_selection') {
+                            } else if (viewState === 'drive_selection' || viewState === 'bluetooth') {
                                 setViewState('idle');
                                 setDrives([]);
                             } else {
@@ -289,6 +290,7 @@ const KioskUploadView = ({ selectedSize, onPhotosUploaded, onBack }: KioskUpload
                         <p className="text-lg text-[#2D3A52]/70 overflow-hidden text-ellipsis whitespace-nowrap px-4">
                             {viewState === 'idle' && 'Selecciona el método de entrada'}
                             {viewState === 'drive_selection' && 'Selecciona la unidad USB'}
+                            {viewState === 'bluetooth' && 'Carga por Bluetooth'}
                             {viewState === 'gallery' && (
                                 <span title={currentPath} className="font-mono text-base">
                                     {currentPath}
@@ -316,8 +318,8 @@ const KioskUploadView = ({ selectedSize, onPhotosUploaded, onBack }: KioskUpload
                             </button>
 
                             <button
-                                onClick={() => alert('Próximamente')}
-                                className="flex flex-col items-center justify-center p-12 bg-[#F0F7FA] border-3 border-[#CEDFE7] hover:border-[#D75F1E] rounded-3xl transition-all group hover:bg-[#D75F1E]/5 opacity-60"
+                                onClick={() => setViewState('bluetooth')}
+                                className="flex flex-col items-center justify-center p-12 bg-[#F0F7FA] border-3 border-[#CEDFE7] hover:border-[#D75F1E] rounded-3xl transition-all group hover:bg-[#D75F1E]/5"
                             >
                                 <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform">
                                     <i className="ri-bluetooth-line text-5xl text-[#D75F1E]"></i>
@@ -431,6 +433,23 @@ const KioskUploadView = ({ selectedSize, onPhotosUploaded, onBack }: KioskUpload
                                 )}
                             </div>
                         </div>
+                    )}
+                    {/* View: BLUETOOTH */}
+                    {viewState === 'bluetooth' && (
+                        <BluetoothUploadView
+                            onBack={() => setViewState('idle')}
+                            onPhotosReceived={(received) => {
+                                setPhotos(received);
+                                setViewState('gallery');
+                                // Determine folder structure or current path context if needed
+                                setCurrentPath('Bluetooth Import');
+                                setFolders([]);
+                                // Auto-select all received?
+                                const newMap = new Map();
+                                received.forEach(p => newMap.set(p.id, p));
+                                setSelectedPhotosMap(newMap);
+                            }}
+                        />
                     )}
                 </div>
 

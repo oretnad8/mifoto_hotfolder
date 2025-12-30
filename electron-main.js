@@ -66,13 +66,8 @@ function createWindow() {
     });
 
     // Load the Next.js app
-    // In development, we wait for localhost:3000
-    // In production, we might load a file if we export, but for now we follow the plan to load localhost
     const startUrl = process.env.ELECTRON_START_URL || 'http://localhost:3000';
     mainWindow.loadURL(startUrl);
-
-    // Open the DevTools.
-    // mainWindow.webContents.openDevTools();
 
     mainWindow.on('closed', function () {
         mainWindow = null;
@@ -246,6 +241,167 @@ ipcMain.handle('scan-directory', async (event, rootPath) => {
         return { success: false, error: error.message };
     }
 });
+
+// ==========================================
+// BLUETOOTH SERVER IMPLEMENTATION (C# Sidecar)
+// ==========================================
+let sidecarProcess = null;
+
+ipcMain.handle('bluetooth-start-listening', async (event) => {
+    // If already running, checking if it's still alive might be good, but
+    // for now we trust the variable.
+    if (sidecarProcess) {
+        return { success: true, message: 'Already running (Sidecar)' };
+    }
+
+    try {
+        const { spawn } = require('child_process');
+        const path = require('path');
+
+        console.log('[Bluetooth] Starting Sidecar...');
+
+        // Path to the C# project
+        // In dev: run using dotnet run on the csproj
+        // In prod: run the build executable
+        const projectPath = path.join(__dirname, 'resources', 'bluetooth-server');
+
+        // Using 'dotnet run' is easier for dev environments as it handles restore/build
+        sidecarProcess = spawn('dotnet', ['run', '--project', projectPath], {
+            stdio: ['ignore', 'pipe', 'pipe'] // Ignore stdin, pipe stdout/stderr
+        });
+
+        // Capture reference to THIS process instance to avoid clobbering global var
+        const thisProc = sidecarProcess;
+
+        sidecarProcess.stdout.on('data', (data) => {
+            const lines = data.toString().split('\n');
+            lines.forEach(line => {
+                if (!line.trim()) return;
+                try {
+                    const msg = JSON.parse(line);
+                    console.log('[Sidecar]', msg);
+
+                    if (msg.event_type === 'connection') {
+                        mainWindow.webContents.send('bluetooth-file-incoming', { name: "Dispositivo Conectado" });
+                        // Fake progress to show activity since we don't have total size yet
+                        mainWindow.webContents.send('bluetooth-progress', { loaded: 1, total: 100 });
+                    }
+                    else if (msg.event_type === 'file_saved') {
+                        const localUrl = `local-media://resource/${msg.path.replace(/\\/g, '/')}`;
+                        mainWindow.webContents.send('bluetooth-file-saved', {
+                            path: msg.path,
+                            preview: localUrl,
+                            name: msg.name
+                        });
+                        mainWindow.webContents.send('bluetooth-progress', { loaded: 100, total: 100 });
+                    }
+                    else if (msg.event_type === 'progress') {
+                        mainWindow.webContents.send('bluetooth-progress', {
+                            loaded: msg.loaded,
+                            total: msg.total
+                        });
+                    }
+                    else if (msg.event_type === 'error') {
+                        mainWindow.webContents.send('bluetooth-error', msg.message);
+                    }
+                } catch (e) {
+                    // Ignore non-json or malformed lines from stdout
+                    if (line.trim().length > 0) console.log('[Sidecar Log]', line.trim());
+                }
+            });
+        });
+
+        sidecarProcess.stderr.on('data', (data) => {
+            console.error('[Sidecar Error]', data.toString());
+        });
+
+        sidecarProcess.on('close', (code) => {
+            console.log(`[Bluetooth] Sidecar exited with code ${code}`);
+            // Only clear global variable if it still points to THIS process
+            if (sidecarProcess === thisProc) {
+                sidecarProcess = null;
+            }
+        });
+
+        return { success: true, message: 'Sidecar started', hostname: 'Kiosco (C# Sidecar)' };
+
+    } catch (e) {
+        console.error('Failed to start Sidecar:', e);
+        return { success: false, error: e.message };
+    }
+});
+
+ipcMain.handle('bluetooth-open-wizard', async () => {
+    try {
+        console.log('Opening Windows Bluetooth Wizard...');
+        const { spawn } = require('child_process');
+        const child = spawn('fsquirt.exe', [], { detached: true, stdio: 'ignore' });
+        child.unref();
+        return { success: true };
+    } catch (error) {
+        console.error('Failed to open wizard:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('bluetooth-stop-listening', async () => {
+    if (sidecarProcess) {
+        console.log(`[Bluetooth] Stopping Sidecar (PID: ${sidecarProcess.pid})...`);
+
+        // 1. Try graceful shutdown (sends STOP to C# to reset Radio Mode)
+        if (sidecarProcess.stdin && !sidecarProcess.stdin.destroyed) {
+            try {
+                sidecarProcess.stdin.write("STOP\n");
+            } catch (e) { /* ignore */ }
+        }
+
+        // 2. Wait 1000ms then force kill ALL instances directly
+        setTimeout(() => {
+            // CRITICAL: If a new sidecarProcess has started (e.g. rapid re-entry or double-mount), 
+            // DO NOT kill everything. The new process is likely "BluetoothServer.exe" too.
+            if (sidecarProcess) {
+                console.log('[Bluetooth] Cleanup aborted: New Sidecar process is active.');
+                return;
+            }
+
+            console.log('[Bluetooth] Executing Nuclear Cleanup (Kill all BluetoothServer.exe)...');
+            try {
+                const { exec } = require('child_process');
+                // Use /IM to kill by image name, /F for force
+                exec('taskkill /F /IM BluetoothServer.exe', (err, stdout, stderr) => {
+                    if (err) {
+                        // Error 128: The process not found. (which is good)
+                        if (err.code !== 128) console.log('[Bluetooth] Cleanup result:', err.message);
+                        else console.log('[Bluetooth] Clean shutdown confirmed (Process gone).');
+                    } else {
+                        console.log('[Bluetooth] Force killed remaining instances.');
+                    }
+                });
+            } catch (e) {
+                console.error('[Bluetooth] Cleanup exception:', e);
+            }
+        }, 1000);
+
+        // We clean up reference immediately to prevent race conditions
+        // but the timeout ensures the kill happens.
+        // wait... if we null it, the timeout works on closure scope.
+        const procToKill = sidecarProcess;
+        sidecarProcess = null;
+
+        setTimeout(() => {
+            if (procToKill) {
+                try {
+                    process.kill(procToKill.pid);
+                    // Also taskkill as backup
+                    const { exec } = require('child_process');
+                    exec(`taskkill /pid ${procToKill.pid} /f /t`);
+                } catch (e) { }
+            }
+        }, 500);
+    }
+    return { success: true };
+});
+
 
 // IPC: Get Local IP
 ipcMain.handle('get-local-ip', async () => {

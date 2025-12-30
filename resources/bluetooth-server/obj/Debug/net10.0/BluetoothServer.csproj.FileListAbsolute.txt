@@ -1,0 +1,39 @@
+C:\Users\Dante Ro\workspace\mifoto_hotfolder\resources\bluetooth-server\bin\Debug\net10.0\BluetoothServer.exe
+C:\Users\Dante Ro\workspace\mifoto_hotfolder\resources\bluetooth-server\bin\Debug\net10.0\BluetoothServer.deps.json
+C:\Users\Dante Ro\workspace\mifoto_hotfolder\resources\bluetooth-server\bin\Debug\net10.0\BluetoothServer.runtimeconfig.json
+C:\Users\Dante Ro\workspace\mifoto_hotfolder\resources\bluetooth-server\bin\Debug\net10.0\BluetoothServer.dll
+C:\Users\Dante Ro\workspace\mifoto_hotfolder\resources\bluetooth-server\bin\Debug\net10.0\BluetoothServer.pdb
+C:\Users\Dante Ro\workspace\mifoto_hotfolder\resources\bluetooth-server\bin\Debug\net10.0\InTheHand.Net.Bluetooth.dll
+C:\Users\Dante Ro\workspace\mifoto_hotfolder\resources\bluetooth-server\bin\Debug\net10.0\Linux.Bluetooth.dll
+C:\Users\Dante Ro\workspace\mifoto_hotfolder\resources\bluetooth-server\bin\Debug\net10.0\Tmds.DBus.dll
+C:\Users\Dante Ro\workspace\mifoto_hotfolder\resources\bluetooth-server\obj\Debug\net10.0\BluetoothServer.csproj.AssemblyReference.cache
+C:\Users\Dante Ro\workspace\mifoto_hotfolder\resources\bluetooth-server\obj\Debug\net10.0\BluetoothServer.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Dante Ro\workspace\mifoto_hotfolder\resources\bluetooth-server\obj\Debug\net10.0\BluetoothServer.AssemblyInfoInputs.cache
+C:\Users\Dante Ro\workspace\mifoto_hotfolder\resources\bluetooth-server\obj\Debug\net10.0\BluetoothServer.AssemblyInfo.cs
+C:\Users\Dante Ro\workspace\mifoto_hotfolder\resources\bluetooth-server\obj\Debug\net10.0\BluetoothServer.csproj.CoreCompileInputs.cache
+C:\Users\Dante Ro\workspace\mifoto_hotfolder\resources\bluetooth-server\obj\Debug\net10.0\BluetoothServer.sourcelink.json
+C:\Users\Dante Ro\workspace\mifoto_hotfolder\resources\bluetooth-server\obj\Debug\net10.0\Bluetoot.25F35433.Up2Date
+C:\Users\Dante Ro\workspace\mifoto_hotfolder\resources\bluetooth-server\obj\Debug\net10.0\BluetoothServer.dll
+C:\Users\Dante Ro\workspace\mifoto_hotfolder\resources\bluetooth-server\obj\Debug\net10.0\refint\BluetoothServer.dll
+C:\Users\Dante Ro\workspace\mifoto_hotfolder\resources\bluetooth-server\obj\Debug\net10.0\BluetoothServer.pdb
+C:\Users\Dante Ro\workspace\mifoto_hotfolder\resources\bluetooth-server\obj\Debug\net10.0\BluetoothServer.genruntimeconfig.cache
+C:\Users\Dante Ro\workspace\mifoto_hotfolder\resources\bluetooth-server\obj\Debug\net10.0\ref\BluetoothServer.dll
+C:\Users\DROJAS\workspace\lib\resources\bluetooth-server\bin\Debug\net10.0\BluetoothServer.exe
+C:\Users\DROJAS\workspace\lib\resources\bluetooth-server\bin\Debug\net10.0\BluetoothServer.deps.json
+C:\Users\DROJAS\workspace\lib\resources\bluetooth-server\bin\Debug\net10.0\BluetoothServer.runtimeconfig.json
+C:\Users\DROJAS\workspace\lib\resources\bluetooth-server\bin\Debug\net10.0\BluetoothServer.dll
+C:\Users\DROJAS\workspace\lib\resources\bluetooth-server\bin\Debug\net10.0\BluetoothServer.pdb
+C:\Users\DROJAS\workspace\lib\resources\bluetooth-server\bin\Debug\net10.0\InTheHand.Net.Bluetooth.dll
+C:\Users\DROJAS\workspace\lib\resources\bluetooth-server\bin\Debug\net10.0\Linux.Bluetooth.dll
+C:\Users\DROJAS\workspace\lib\resources\bluetooth-server\bin\Debug\net10.0\Tmds.DBus.dll
+C:\Users\DROJAS\workspace\lib\resources\bluetooth-server\obj\Debug\net10.0\BluetoothServer.csproj.AssemblyReference.cache
+C:\Users\DROJAS\workspace\lib\resources\bluetooth-server\obj\Debug\net10.0\BluetoothServer.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\DROJAS\workspace\lib\resources\bluetooth-server\obj\Debug\net10.0\BluetoothServer.AssemblyInfoInputs.cache
+C:\Users\DROJAS\workspace\lib\resources\bluetooth-server\obj\Debug\net10.0\BluetoothServer.AssemblyInfo.cs
+C:\Users\DROJAS\workspace\lib\resources\bluetooth-server\obj\Debug\net10.0\BluetoothServer.csproj.CoreCompileInputs.cache
+C:\Users\DROJAS\workspace\lib\resources\bluetooth-server\obj\Debug\net10.0\Bluetoot.25F35433.Up2Date
+C:\Users\DROJAS\workspace\lib\resources\bluetooth-server\obj\Debug\net10.0\BluetoothServer.dll
+C:\Users\DROJAS\workspace\lib\resources\bluetooth-server\obj\Debug\net10.0\refint\BluetoothServer.dll
+C:\Users\DROJAS\workspace\lib\resources\bluetooth-server\obj\Debug\net10.0\BluetoothServer.pdb
+C:\Users\DROJAS\workspace\lib\resources\bluetooth-server\obj\Debug\net10.0\BluetoothServer.genruntimeconfig.cache
+C:\Users\DROJAS\workspace\lib\resources\bluetooth-server\obj\Debug\net10.0\ref\BluetoothServer.dll
