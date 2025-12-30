@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { Photo } from '../types';
+import heic2any from 'heic2any';
 
 interface BluetoothProps {
     onBack: () => void;
@@ -52,16 +53,54 @@ const BluetoothUploadView = ({ onBack, onPhotosReceived }: BluetoothProps) => {
             }
         });
 
-        const cleanupSaved = (window as any).electron?.on('bluetooth-file-saved', (file: any) => {
+        const cleanupSaved = (window as any).electron?.on('bluetooth-file-saved', async (file: any) => {
             if (isMounted) {
                 setStatus('Archivo recibido correctamente. Esperando más...');
                 setProgress(null);
 
+                let previewUrl = file.preview;
+                let fileObj: File;
+
+                try {
+                    // Always fetch the content from local-media to get a real Blob
+                    // This fixes the 0kb issue for non-HEIC files
+                    const res = await fetch(file.preview);
+                    const blob = await res.blob();
+
+                    // Client-side HEIC conversion
+                    if (file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
+                        console.log('Converting Bluetooth HEIC:', file.name);
+                        const convertedBlob = await heic2any({
+                            blob,
+                            toType: 'image/jpeg',
+                            quality: 0.8
+                        });
+
+                        const finalBlob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+                        previewUrl = URL.createObjectURL(finalBlob);
+
+                        fileObj = new File(
+                            [finalBlob],
+                            file.name.replace(/\.heic$/i, '.jpg').replace(/\.heif$/i, '.jpg'),
+                            { type: 'image/jpeg' }
+                        );
+                    } else {
+                        // Standard image (JPG, PNG) - use loaded blob
+                        fileObj = new File([blob], file.name, { type: blob.type || 'image/jpeg' });
+                    }
+
+                } catch (e) {
+                    console.error('Error processing Bluetooth file:', e);
+                    // Fallback (might still be 0kb but better than crashing)
+                    fileObj = new File([], file.name);
+                }
+
                 const newPhoto: Photo = {
                     id: Date.now().toString(),
-                    name: file.name,
-                    file: new File([], file.name), // Dummy file object, backend handles real file
-                    preview: file.preview
+                    name: fileObj.name,
+                    file: fileObj,
+                    preview: previewUrl,
+                    sourcePath: file.preview
                 };
 
                 setReceivedPhotos(prev => [...prev, newPhoto]);

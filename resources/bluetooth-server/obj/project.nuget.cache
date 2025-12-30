@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "KsLM+5mrZhQ=",
+  "dgSpecHash": "l1K9d5omHfk=",
   "success": true,
-  "projectFilePath": "C:\\Users\\DROJAS\\workspace\\lib\\resources\\bluetooth-server\\BluetoothServer.csproj",
+  "projectFilePath": "C:\\Users\\DROJAS\\workspace\\mifoto_hotfolder\\resources\\bluetooth-server\\BluetoothServer.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\DROJAS\\.nuget\\packages\\inthehand.net.bluetooth\\4.1.43\\inthehand.net.bluetooth.4.1.43.nupkg.sha512",
     "C:\\Users\\DROJAS\\.nuget\\packages\\linux.bluetooth\\5.66.0\\linux.bluetooth.5.66.0.nupkg.sha512",

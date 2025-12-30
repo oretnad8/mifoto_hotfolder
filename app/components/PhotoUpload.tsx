@@ -5,6 +5,8 @@ import { useState, useRef, useCallback, ChangeEvent, DragEvent } from 'react';
 import { Photo, Size } from '../types';
 import ImageEditorModal from './ImageEditorModal';
 import PhotoGrid from './PhotoGrid';
+import { processImage } from '../actions/process-image';
+import heic2any from 'heic2any';
 
 interface PhotoUploadProps {
   selectedSize: Size | null;
@@ -20,7 +22,7 @@ const PhotoUpload = ({ selectedSize, onPhotosUploaded, onBack }: PhotoUploadProp
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const MAX_PHOTOS = 50;
-  const SUPPORTED_FORMATS = ['image/jpeg', 'image/png', 'image/heic'];
+  const SUPPORTED_FORMATS = ['image/jpeg', 'image/png', 'image/heic', 'image/heif'];
   const MAX_DIMENSION = 12000;
 
   const isEvenOnlySize = (sizeId: string) => {
@@ -28,7 +30,7 @@ const PhotoUpload = ({ selectedSize, onPhotosUploaded, onBack }: PhotoUploadProp
   };
 
   const validateFile = (file: File) => {
-    if (!SUPPORTED_FORMATS.includes(file.type)) {
+    if (!SUPPORTED_FORMATS.includes(file.type) && !file.name.toLowerCase().endsWith('.heic')) {
       return 'Formato no soportado. Usa JPG, PNG o HEIC.';
     }
     if (file.size > 50 * 1024 * 1024) {
@@ -82,14 +84,46 @@ const PhotoUpload = ({ selectedSize, onPhotosUploaded, onBack }: PhotoUploadProp
         continue;
       }
 
-      const preview = await createImagePreview(file);
+      let currentFile = file;
+      let currentPreview = '';
+
+      const isHeic = file.type === 'image/heic' || file.type === 'image/heif' || file.name.toLowerCase().endsWith('.heic');
+
+      if (isHeic) {
+        try {
+          // Client-side conversion using heic2any
+          const convertedBlob = await heic2any({
+            blob: file,
+            toType: 'image/jpeg',
+            quality: 0.8
+          });
+
+          const finalBlob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+          currentPreview = URL.createObjectURL(finalBlob);
+
+          // Replace the original HEIC file with the converted JPEG for further processing
+          currentFile = new File(
+            [finalBlob],
+            file.name.replace(/\.heic$/i, '.jpg').replace(/\.heif$/i, '.jpg'),
+            { type: 'image/jpeg' }
+          );
+
+        } catch (e) {
+          console.error("HEIC conversion failed on client-side:", e);
+          alert(`No se pudo procesar la imagen HEIC: ${file.name}. Intenta con otro formato.`);
+          continue;
+        }
+      } else {
+        currentPreview = await createImagePreview(file);
+      }
+
       const photoId = Date.now() + Math.random();
 
       newPhotos.push({
         id: photoId,
-        file,
-        preview,
-        name: file.name
+        file: currentFile,
+        preview: currentPreview,
+        name: currentFile.name
       });
     }
 
@@ -244,7 +278,7 @@ const PhotoUpload = ({ selectedSize, onPhotosUploaded, onBack }: PhotoUploadProp
               ref={fileInputRef}
               type="file"
               multiple
-              accept="image/jpeg,image/png,image/heic"
+              accept="image/jpeg,image/png,image/heic,image/heif,.heic,.HEIC"
               onChange={handleFileSelect}
               className="hidden"
             />

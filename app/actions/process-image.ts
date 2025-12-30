@@ -115,6 +115,16 @@ export async function processImage(formData: FormData) {
             });
         }
 
+        // 5. RESIZE (Explicit)
+        if (params.resize) {
+            pipeline = pipeline.resize({
+                width: params.resize.width,
+                height: params.resize.height,
+                fit: 'inside', // Or 'cover' depending on need, 'inside' preserves aspect ratio
+                withoutEnlargement: true
+            });
+        }
+
         // For now, we trust `params.crop` defines the valid image area the user selected. 
         // If the user selected "Fit" in the UI, the UI shows the image inside the box. 
         // But `easy-crop`'s `croppedAreaPixels` essentially just gives the crop of the image itself.

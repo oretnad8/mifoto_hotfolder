@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Photo, Size } from '../types';
 import ImageEditorModal from './ImageEditorModal';
 import PhotoGrid from './PhotoGrid';
 import BluetoothUploadView from './BluetoothUploadView';
+import heic2any from 'heic2any';
 
 interface KioskUploadViewProps {
     selectedSize: Size | null;
@@ -83,7 +84,7 @@ const KioskUploadView = ({ selectedSize, onPhotosUploaded, onBack }: KioskUpload
                 // Map files with STABLE ID (path) so selection persists
                 const scanned: Photo[] = (result.files || []).map((f: any) => ({
                     id: f.path, // STABLE ID
-                    file: { name: f.name, size: 0, type: 'image/jpeg', path: f.path } as unknown as File,
+                    file: { name: f.name, size: 0, type: f.name.toLowerCase().endsWith('.heic') ? 'image/heic' : 'image/jpeg', path: f.path } as unknown as File,
                     preview: f.preview,
                     name: f.name,
                     sourcePath: f.path
@@ -135,6 +136,50 @@ const KioskUploadView = ({ selectedSize, onPhotosUploaded, onBack }: KioskUpload
         loadPath(prevPath);
     };
 
+
+
+    // --- HEIC Processing Logic ---
+    useEffect(() => {
+        const processHeics = async () => {
+            const heicsToProcess = photos.filter(p =>
+                (p.name.toLowerCase().endsWith('.heic') || p.name.toLowerCase().endsWith('.heif')) &&
+                p.preview.startsWith('local-media://')
+            );
+
+            if (heicsToProcess.length === 0) return;
+
+            // Process one by one
+            for (const photo of heicsToProcess) {
+                try {
+                    console.log('Converting HEIC thumbnail for:', photo.name);
+                    const res = await fetch(photo.preview);
+                    const blob = await res.blob();
+
+                    // heic2any returns Blob or Blob[]
+                    const convertedBlob = await heic2any({
+                        blob,
+                        toType: 'image/jpeg',
+                        quality: 0.8 // Thumbnail quality
+                    });
+
+                    const finalBlob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+                    const jpegUrl = URL.createObjectURL(finalBlob);
+
+                    setPhotos(prev => prev.map(p =>
+                        p.id === photo.id ? { ...p, preview: jpegUrl } : p
+                    ));
+
+                } catch (err) {
+                    console.error('Error processing HEIC:', photo.name, err);
+                }
+            }
+        };
+
+        if (viewState === 'gallery') {
+            processHeics();
+        }
+    }, [photos.length, viewState]); // Use length to trigger on load, but check content inside
+
     // --- Selection Logic ---
     const toggleSelect = (photo: Photo) => {
         const newMap = new Map(selectedPhotosMap);
@@ -165,8 +210,44 @@ const KioskUploadView = ({ selectedSize, onPhotosUploaded, onBack }: KioskUpload
                 if (!res.ok) throw new Error("Failed to fetch local file");
 
                 const blob = await res.blob();
-                const newFile = new File([blob], photo.name, { type: res.headers.get('content-type') || 'image/jpeg' });
-                const hydratedPhoto = { ...photo, file: newFile };
+
+                // Check if HEIC
+                const isHeic = photo.name.toLowerCase().endsWith('.heic') || photo.name.toLowerCase().endsWith('.heif');
+
+                let finalFile = new File([blob], photo.name, { type: res.headers.get('content-type') || 'image/jpeg' });
+                let finalPreview = photo.preview;
+
+                if (isHeic) {
+                    console.log('Converting HEIC for editing...');
+                    // Use heic2any on client to avoid server limitations/issues
+                    try {
+                        const convertedBlob = await heic2any({
+                            blob: blob,
+                            toType: 'image/jpeg',
+                            quality: 1.0 // High quality for editing
+                        });
+
+                        const finalBlob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+                        finalPreview = URL.createObjectURL(finalBlob);
+
+                        finalFile = new File(
+                            [finalBlob],
+                            photo.name.replace(/\.heic$/i, '.jpg').replace(/\.heif$/i, '.jpg'),
+                            { type: 'image/jpeg' }
+                        );
+
+                    } catch (e) {
+                        console.error("heic2any failed:", e);
+                        throw new Error("No se pudo convertir la imagen HEIC: " + (e as any).message);
+                    }
+                }
+
+                const hydratedPhoto = {
+                    ...photo,
+                    file: finalFile,
+                    preview: finalPreview,
+                    name: finalFile.name // Ensure name matches file name (e.g. .jpg)
+                };
 
                 // Update in view
                 setPhotos(prev => prev.map(p => p.id === photo.id ? hydratedPhoto : p));
@@ -299,6 +380,11 @@ const KioskUploadView = ({ selectedSize, onPhotosUploaded, onBack }: KioskUpload
                         </p>
                     </div>
                     <div className="w-24"></div>
+                </div>
+
+                {/* HEIC Processing Queue */}
+                <div className="hidden">
+                    {/* We use a specialized useEffect for processing instead of rendering elements */}
                 </div>
 
                 {/* Content Area */}

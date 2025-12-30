@@ -18,6 +18,7 @@ export interface EditParams {
     fit: 'contain' | 'cover';
     crop?: { x: number; y: number; width: number; height: number };
     aspectRatio?: number;
+    resize?: { width?: number; height?: number };
 }
 
 export interface Photo {
@@ -26,6 +27,7 @@ export interface Photo {
     preview: string;
     file: File;
     editParams?: EditParams;
+    sourcePath?: string;
 }
 
 export interface CartItem {
@@ -60,4 +62,16 @@ export interface Order {
     paymentMethod?: string;
     paidAt?: Date;
     orderNumber?: string;
+}
+
+export interface PrinterStatus {
+    Name: string;
+    Model: string;
+    Status: string;
+    MediaType: string;
+    MediaRemaining: number;
+    LifeCounter: number;
+    SerialNumber: string;
+    FirmwareVersion: string;
+    ColorDataVersion: string;
 }

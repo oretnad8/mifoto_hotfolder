@@ -127,11 +127,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\DROJAS\\workspace\\lib\\resources\\bluetooth-server\\BluetoothServer.csproj",
+      "projectUniqueName": "C:\\Users\\DROJAS\\workspace\\mifoto_hotfolder\\resources\\bluetooth-server\\BluetoothServer.csproj",
       "projectName": "BluetoothServer",
-      "projectPath": "C:\\Users\\DROJAS\\workspace\\lib\\resources\\bluetooth-server\\BluetoothServer.csproj",
+      "projectPath": "C:\\Users\\DROJAS\\workspace\\mifoto_hotfolder\\resources\\bluetooth-server\\BluetoothServer.csproj",
       "packagesPath": "C:\\Users\\DROJAS\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\DROJAS\\workspace\\lib\\resources\\bluetooth-server\\obj\\",
+      "outputPath": "C:\\Users\\DROJAS\\workspace\\mifoto_hotfolder\\resources\\bluetooth-server\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "C:\\Users\\DROJAS\\AppData\\Roaming\\NuGet\\NuGet.Config"
