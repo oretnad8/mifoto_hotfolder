@@ -35,7 +35,7 @@ const SizeSelection = ({ onSizeSelect, onBack }: SizeSelectionProps) => {
       id: 'large',
       name: 'Foto Kiosco',
       dimensions: '15x20 cm (6x8 pulgadas)',
-      price: '2000',
+      price: '20',
       width: 20,
       height: 15,
       gradient: 'from-purple-300 via-pink-300 to-purple-400'

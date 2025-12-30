@@ -11,7 +11,7 @@ interface PaymentProps {
 
 const Payment = ({ orderData, onPaymentSuccess, onBack }: PaymentProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('mercadopago');
+  const [paymentMethod, setPaymentMethod] = useState('cash');
 
   const handleMercadoPagoPayment = async () => {
     setIsProcessing(true);
@@ -37,8 +37,12 @@ const Payment = ({ orderData, onPaymentSuccess, onBack }: PaymentProps) => {
 
       const data = await response.json();
 
-      if (data.init_point) {
-        window.location.href = data.init_point;
+      // Prioritize sandbox for debugging if available, otherwise use production
+      const redirectUrl = data.sandbox_init_point || data.init_point;
+
+      if (redirectUrl) {
+        console.log('Redirecting to Mercado Pago:', redirectUrl);
+        window.location.href = redirectUrl;
       } else {
         console.error('No init_point returned', data);
         setIsProcessing(false);
