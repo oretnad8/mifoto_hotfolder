@@ -7,7 +7,7 @@
     "dev": "cross-env NODE_ENV=development next dev -H 0.0.0.0 -p 3000",
     "build": "next build",
     "lint": "next lint",
-    "app:windows": "concurrently \"next dev\" \"wait-on tcp:3000 && electron .\""
+    "app:windows": "concurrently \"npm run dev\" \"wait-on tcp:3000 && electron .\""
   },
   "dependencies": {
     "@prisma/client": "^6.19.1",

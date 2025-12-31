@@ -6,7 +6,7 @@ import { Photo, Size } from '../types';
 import ImageEditorModal from './ImageEditorModal';
 import PhotoGrid from './PhotoGrid';
 import { processImage } from '../actions/process-image';
-import heic2any from 'heic2any';
+// import heic2any from 'heic2any'; // Removed static import
 
 interface PhotoUploadProps {
   selectedSize: Size | null;
@@ -92,6 +92,7 @@ const PhotoUpload = ({ selectedSize, onPhotosUploaded, onBack }: PhotoUploadProp
       if (isHeic) {
         try {
           // Client-side conversion using heic2any
+          const heic2any = (await import('heic2any')).default;
           const convertedBlob = await heic2any({
             blob: file,
             toType: 'image/jpeg',

@@ -58,18 +58,40 @@ const BluetoothUploadView = ({ onBack, onPhotosReceived }: BluetoothProps) => {
                 setStatus('Archivo recibido correctamente. Esperando más...');
                 setProgress(null);
 
-                let previewUrl = file.preview;
+                // Ensure we have a valid path format for fetching/displaying
+                console.log('Bluetooth file saved event:', file);
+
+                // Server sends 'path', Kiosk scanner sends 'preview'. Support both.
+                let previewUrl = file.preview || file.path;
+
+                // Normalization: Bluetooth files sometimes come with non-breaking spaces (\u00A0) in the filename
+                // which might not math the actual file on disk if the OS normalized it.
+                // However, usually we trust the path given by the backend. 
+                // We will handle potential "undefined" here first.
+                if (!previewUrl) {
+                    console.error('File path missing in event:', file);
+                    return;
+                }
+                // If it looks like a windows absolute path (C:\...), prepend file://
+                if (previewUrl && /^[a-zA-Z]:\\/.test(previewUrl)) {
+                    previewUrl = `file://${previewUrl}`;
+                }
+
                 let fileObj: File;
 
                 try {
-                    // Always fetch the content from local-media to get a real Blob
-                    // This fixes the 0kb issue for non-HEIC files
-                    const res = await fetch(file.preview);
+                    // Try to fetch to get a Blob for processing/uploading
+                    // For local files in Electron, fetch(file://...) usually works if webSecurity is false
+                    const res = await fetch(previewUrl);
                     const blob = await res.blob();
 
                     // Client-side HEIC conversion
                     if (file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif')) {
                         console.log('Converting Bluetooth HEIC:', file.name);
+
+                        // Dynamic import
+                        const heic2any = (await import('heic2any')).default;
+
                         const convertedBlob = await heic2any({
                             blob,
                             toType: 'image/jpeg',
@@ -77,13 +99,16 @@ const BluetoothUploadView = ({ onBack, onPhotosReceived }: BluetoothProps) => {
                         });
 
                         const finalBlob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
-                        previewUrl = URL.createObjectURL(finalBlob);
+                        const objectUrl = URL.createObjectURL(finalBlob);
 
                         fileObj = new File(
                             [finalBlob],
                             file.name.replace(/\.heic$/i, '.jpg').replace(/\.heif$/i, '.jpg'),
                             { type: 'image/jpeg' }
                         );
+
+                        // Use the converted blob URL for preview
+                        previewUrl = objectUrl;
                     } else {
                         // Standard image (JPG, PNG) - use loaded blob
                         fileObj = new File([blob], file.name, { type: blob.type || 'image/jpeg' });
@@ -91,8 +116,14 @@ const BluetoothUploadView = ({ onBack, onPhotosReceived }: BluetoothProps) => {
 
                 } catch (e) {
                     console.error('Error processing Bluetooth file:', e);
-                    // Fallback (might still be 0kb but better than crashing)
+                    // Fallback: Create a dummy file pointer but keep the preview URL if possible
                     fileObj = new File([], file.name);
+
+                    // If fetch failed, we might still be able to display the image via direct file:// src
+                    // provided we aren't trying to manipulate it (crop/heic convert)
+                    if (!previewUrl.startsWith('file://') && /^[a-zA-Z]:\\/.test(file.preview)) {
+                        previewUrl = `file://${file.preview}`;
+                    }
                 }
 
                 const newPhoto: Photo = {

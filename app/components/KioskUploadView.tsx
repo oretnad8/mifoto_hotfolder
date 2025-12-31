@@ -5,7 +5,7 @@ import { Photo, Size } from '../types';
 import ImageEditorModal from './ImageEditorModal';
 import PhotoGrid from './PhotoGrid';
 import BluetoothUploadView from './BluetoothUploadView';
-import heic2any from 'heic2any';
+// import heic2any from 'heic2any'; // Removed static import
 
 interface KioskUploadViewProps {
     selectedSize: Size | null;
@@ -156,6 +156,7 @@ const KioskUploadView = ({ selectedSize, onPhotosUploaded, onBack }: KioskUpload
                     const blob = await res.blob();
 
                     // heic2any returns Blob or Blob[]
+                    const heic2any = (await import('heic2any')).default;
                     const convertedBlob = await heic2any({
                         blob,
                         toType: 'image/jpeg',
@@ -221,6 +222,7 @@ const KioskUploadView = ({ selectedSize, onPhotosUploaded, onBack }: KioskUpload
                     console.log('Converting HEIC for editing...');
                     // Use heic2any on client to avoid server limitations/issues
                     try {
+                        const heic2any = (await import('heic2any')).default;
                         const convertedBlob = await heic2any({
                             blob: blob,
                             toType: 'image/jpeg',
