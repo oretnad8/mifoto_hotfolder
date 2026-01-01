@@ -13,6 +13,7 @@ model Order {
   paymentMethod   String   @map("payment_method")
   status          String   @default("pending") // pending, paid, validated
   paymentReference String?  @map("payment_reference")
+  orderNumber     Int?     @map("order_number")
   total           Float
   items           Json
   filesCopied     Boolean  @default(false) @map("files_copied")

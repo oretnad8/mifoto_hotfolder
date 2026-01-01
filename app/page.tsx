@@ -86,6 +86,21 @@ export default function Home() {
       const updatedItems = JSON.parse(JSON.stringify(orderData.items));
 
       // 1. Upload Photos and get server filenames
+      let globalSequence = 1;
+
+      // Extract client name and sanitize
+      const rawName = orderData.customerName || 'cliente';
+      const clientName = rawName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+
+      // Format: 755_01012026 (Hmm_DDMMYYYY)
+      const now = new Date();
+      const hours = now.getHours();
+      const minutes = now.getMinutes().toString().padStart(2, '0');
+      const day = now.getDate().toString().padStart(2, '0');
+      const month = (now.getMonth() + 1).toString().padStart(2, '0');
+      const year = now.getFullYear();
+      const timestamp = `${hours}${minutes}_${day}${month}${year}`;
+
       for (let i = 0; i < orderData.items.length; i++) {
         const item = orderData.items[i];
         console.log(`Processing item ${i}:`, item);
@@ -96,6 +111,13 @@ export default function Home() {
         for (const photo of rawPhotos) {
           if (photo.file) {
             formData.append('photos', photo.file);
+
+            // Generate Custom Name
+            const seqStr = globalSequence.toString().padStart(3, '0');
+            const customName = `${clientName}_${timestamp}_${seqStr}.jpg`;
+            formData.append('customNames', customName);
+
+            globalSequence++;
           }
         }
 
@@ -168,8 +190,13 @@ export default function Home() {
       const createdOrder = await createResponse.json();
       console.log('Order created successfully:', createdOrder);
 
-      // Optionally, if the API returns the created order ID, we can update it?
-      // But we generated ID on frontend. That's fine for now, or use server ID.
+      // Merge server response (orderNumber) into local state
+      setOrderData(prev => ({
+        ...prev!,
+        ...orderData, // ensure we keep existing fields
+        orderNumber: createdOrder.orderNumber, // Add the number from server!
+        id: createdOrder.orderId || prev!.id
+      }));
 
       // Clear cart and photos after successful order
       setCartItems([]);

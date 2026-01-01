@@ -113,7 +113,9 @@ export default function AdminDashboard({
                                                 >
                                                     <td className="p-6">
                                                         <div className="font-mono text-[#D75F1E] font-bold text-lg">
-                                                            #{order.id.slice(0, 8)}
+                                                            {order.orderNumber
+                                                                ? `#${String(order.orderNumber).padStart(6, '0')}`
+                                                                : `#${order.id.slice(0, 8)}`}
                                                         </div>
                                                         <div className="text-xs text-[#2D3A52]/60 mt-1 flex items-center gap-1">
                                                             <i className="ri-time-line"></i>

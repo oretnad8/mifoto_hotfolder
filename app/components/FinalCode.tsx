@@ -64,7 +64,9 @@ const FinalCode = ({ orderData, onNewOrder }: FinalCodeProps) => {
 
           <div className="bg-white rounded-2xl p-8 mb-8 shadow-lg">
             <div className="text-6xl font-bold text-[#D75F1E] mb-4 font-mono tracking-wider">
-              {orderData.id}
+              {orderData.orderNumber
+                ? String(orderData.orderNumber).padStart(6, '0')
+                : orderData.id.slice(0, 8)}
             </div>
           </div>
 

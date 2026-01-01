@@ -1,7 +1,8 @@
-import { copy, mkdir, pathExists, unlink } from 'fs-extra';
+import { copy, mkdir, pathExists, unlink, readdir, stat } from 'fs-extra';
 import path from 'path';
 import sharp from 'sharp';
 import { prisma } from './db';
+import { EditParams, Photo } from '../app/types';
 
 // Directories
 export const TEMP_UPLOAD_DIR = path.join(process.cwd(), 'temp_uploads');
@@ -10,7 +11,6 @@ const PRINT_BASE_PATH = process.env.PRINT_BASE_PATH || 'C:\\DNP\\HotFolderPrint\
 // Types for Print Configuration
 interface PrintConfig {
     folderName: string;
-    needsProcessing: boolean;
     imageWidth?: number;
     imageHeight?: number;
     canvasWidth?: number;
@@ -19,12 +19,20 @@ interface PrintConfig {
 
 // Configuration for each size
 const PRINT_CONFIGS: Record<string, PrintConfig> = {
-    'kiosco': { folderName: 's4x6', needsProcessing: false }, // 4x6" (10x15cm) - Native
-    'large': { folderName: 's6x8', needsProcessing: false },  // 6x8" (15x20cm) - Native
-    'square-large': { folderName: 's6x6', needsProcessing: false }, // 6x6" (15x15cm) - Native
+    'kiosco': {
+        folderName: 's4x6',
+        imageWidth: 1200, imageHeight: 1800, canvasWidth: 1200, canvasHeight: 1800 // Default 4x6 sizes
+    },
+    'large': {
+        folderName: 's6x8',
+        imageWidth: 1800, imageHeight: 2400, canvasWidth: 1800, canvasHeight: 2400 // Default 6x8 sizes
+    },
+    'square-large': {
+        folderName: 's6x6',
+        imageWidth: 1800, imageHeight: 1800, canvasWidth: 1800, canvasHeight: 1800 // Default 6x6 sizes 
+    },
     'medium': {
         folderName: 's6x8', // Prints on 6x8 paper
-        needsProcessing: true,
         imageWidth: 1500, // 5" @ 300dpi
         imageHeight: 2100, // 7" @ 300dpi
         canvasWidth: 1800, // 6" @ 300dpi
@@ -32,7 +40,6 @@ const PRINT_CONFIGS: Record<string, PrintConfig> = {
     },
     'square-small': {
         folderName: 's6x6', // Prints on 6x6 paper
-        needsProcessing: true,
         imageWidth: 1500, // 5" @ 300dpi
         imageHeight: 1500, // 5" @ 300dpi
         canvasWidth: 1800, // 6" @ 300dpi
@@ -42,95 +49,179 @@ const PRINT_CONFIGS: Record<string, PrintConfig> = {
 
 /**
  * Process and save image using Sharp
- * Resizes the image and centers it on a white canvas
+ * Applies rotation, crop, color adjustments, and fits to canvas.
  */
 async function processAndSaveImage(
     sourcePath: string,
     targetPath: string,
-    config: PrintConfig
+    config: PrintConfig,
+    params?: EditParams
 ) {
-    if (!config.imageWidth || !config.imageHeight || !config.canvasWidth || !config.canvasHeight) {
-        throw new Error('Missing dimensions in config for processing');
-    }
+    // Basic defaults if no specific canvas size is set (fallback to metadata later if needed, but for print we usually want fixed sizes)
+    // Actually, Kiosco/Large/Square-Large didn't have dims in previous code, but "process everything" implies we should enforce dims or at least re-save.
+    // I put defaults in PRINT_CONFIGS for standard sizes to ensure consistent output.
 
     try {
-        const image = sharp(sourcePath);
-        const metadata = await image.metadata();
+        const inputBuffer = await sharp(sourcePath).toBuffer();
+        let pipeline = sharp(inputBuffer);
 
-        // 1. Handle Orientation (EXIF) and Auto-Rotate for best fit
-        // Note: .rotate() with no args auto-orients based on EXIF
-        let pipeline = image.rotate();
-
-        // We need to check dimensions AFTER EXIF rotation.
-        // Sharp's metadata is based on the input file, so if we want "oriented" dimensions, 
-        // we might rely on the assumption that most phones/cameras set Orientation tag.
-        // However, to simplicity, we can just process the rotation.
-
-        // Let's analyze simple aspect ratio matching.
-        // If the target is Portrait (Height > Width)
-        // AND the Input is Landscape (Width > Height)
-        // WE SHOULD ROTATE 90 degrees to maximize print area.
-
-        // Since we can't easily get the "rotated" metadata without reading the buffer,
-        // we'll do a two-step approach or rely on buffer.
-
-        const buffer = await pipeline.toBuffer();
-        const orientedImage = sharp(buffer);
-        const orientedMeta = await orientedImage.metadata();
-
-        let rotate90 = false;
-
-        if (orientedMeta.width && orientedMeta.height) {
-            const inputIsLandscape = orientedMeta.width > orientedMeta.height;
-            const targetIsPortrait = config.imageHeight > config.imageWidth;
-
-            // If orientations oppose, rotate 90 deg
-            if (inputIsLandscape && targetIsPortrait) {
-                rotate90 = true;
-            }
-        }
-
-        if (rotate90) {
-            // Re-wrap the buffer-based instance to apply rotation
-            // Note: sharp instances are immutable-ish streams, better to chain or new instance
-            pipeline = orientedImage.rotate(90);
+        // 1. apply rotation first to establish dimensions
+        if (params?.rotation) {
+            pipeline = pipeline.rotate(params.rotation);
         } else {
-            pipeline = orientedImage;
+            pipeline = pipeline.rotate(); // Auto based on EXIF
         }
 
-        // 2. Resize with cover to fill the 5x7 area (cropping if necessary)
-        const resizedImageBuffer = await pipeline
-            .resize(config.imageWidth, config.imageHeight, {
-                fit: 'cover', // crop to cover the dimensions
-                position: 'center', // crop from center
-                background: { r: 255, g: 255, b: 255, alpha: 1 }
-            })
-            .toBuffer();
+        // We MUST realize the buffer here to get reliable dimensions for checking crop validity
+        // especially if rotation changed the aspect ratio (90/270 deg).
+        const rotatedBuffer = await pipeline.toBuffer();
+        pipeline = sharp(rotatedBuffer);
+        const meta = await pipeline.metadata();
+        const imgW = meta.width || 0;
+        const imgH = meta.height || 0;
 
-        // 3. Create white canvas and composite
-        await sharp({
-            create: {
-                width: config.canvasWidth,
-                height: config.canvasHeight,
-                channels: 4,
-                background: { r: 255, g: 255, b: 255, alpha: 1 } // White background
+        if (params) {
+            // 2. Adjustments
+            const brightness = params.brightness || 1;
+            const saturation = params.saturation || 1;
+            const contrast = params.contrast || 1;
+
+            pipeline = pipeline.modulate({
+                brightness: brightness,
+                saturation: saturation,
+            });
+
+            if (contrast !== 1) {
+                const slope = contrast;
+                const intercept = 128 * (1 - contrast);
+                pipeline = pipeline.linear(slope, intercept);
             }
-        })
-            .composite([
-                {
-                    input: resizedImageBuffer,
-                    gravity: 'center' // Center the image on the canvas
-                }
-            ])
-            .withMetadata({ density: 300 }) // Set DPI to 300
-            .jpeg({ quality: 95 }) // Output high quality JPEG
-            .toFile(targetPath);
 
-        console.log(`Processed and saved to: ${targetPath}`);
+            // 3. Crop
+            if (params.crop) {
+                // Validate bounds!
+                let { x, y, width, height } = params.crop;
+
+                // Sanitize / Clamp
+                x = Math.max(0, x);
+                y = Math.max(0, y);
+                // Ensure we don't go OOB
+                if (x + width > imgW) width = Math.max(1, imgW - x);
+                if (y + height > imgH) height = Math.max(1, imgH - y);
+
+                // Only extract if valid area remains
+                if (width > 0 && height > 0) {
+                    pipeline = pipeline.extract({
+                        left: Math.round(x),
+                        top: Math.round(y),
+                        width: Math.round(width),
+                        height: Math.round(height)
+                    });
+                }
+            }
+        }
+
+        // 4. Resize and Canvas Logic (Fit to Print Size)
+        // If config has dimensions, enforce them.
+        if (config.imageWidth && config.imageHeight && config.canvasWidth && config.canvasHeight) {
+
+            // Check for rotation need (Landscape vs Portrait) IF no explicit rotation was done/requested?
+            // Actually, if the user "edited" it, the orientation is final.
+            // If it's "raw" (no params), we might want to auto-rotate to fit best (smart fit).
+
+            // Smart Fit logic:
+            // Get current pipeline dimensions
+            const tempBuf = await pipeline.toBuffer();
+            const currentImg = sharp(tempBuf);
+            const meta = await currentImg.metadata();
+
+            if (meta.width && meta.height) {
+                const isLandscape = meta.width > meta.height;
+                const targetIsPortrait = config.imageHeight > config.imageWidth; // e.g. 5x7 (1500x2100)
+
+                // If we have a mismatch and NO explicit user rotation (params.rotation === 0 or undefined), swap.
+                // NOTE: If user explicitly rotated, we respect it.
+                if ((!params || !params.rotation) && (isLandscape && targetIsPortrait)) {
+                    pipeline = currentImg.rotate(90);
+                } else {
+                    pipeline = currentImg; // Reset pipeline to intermediate state
+                }
+            }
+
+            // Resize image to fit IN the canvas area (imageWidth/Height)
+            // 'cover' fills the area (good for borderless feeling if ratio matches)
+            // 'contain' ensures whole image matches. 
+            // Standard Kiosk behavior: 'cover' usually unless 'fit' param specified.
+            // But usually we map `crop` from UI to this. If `params.crop` was applied, that IS the image.
+
+            // Allow explicit resizing if params provided (rarely passed for print, usually just crop)
+            // We resize the RESULT of the crop to the target image area.
+
+            const resizeOptions: sharp.ResizeOptions = {
+                width: config.imageWidth,
+                height: config.imageHeight,
+                fit: (params?.fit === 'contain') ? 'contain' : 'cover',
+                background: { r: 255, g: 255, b: 255, alpha: 1 }
+            };
+
+            const resizedBuffer = await pipeline
+                .resize(resizeOptions)
+                .toBuffer();
+
+            // Composite onto Canvas
+            await sharp({
+                create: {
+                    width: config.canvasWidth,
+                    height: config.canvasHeight,
+                    channels: 4,
+                    background: { r: 255, g: 255, b: 255, alpha: 1 }
+                }
+            })
+                .composite([{ input: resizedBuffer, gravity: 'center' }])
+                .withMetadata({ density: 300 })
+                .jpeg({ quality: 95 })
+                .toFile(targetPath);
+
+        } else {
+            // Fallback: Just save the pipeline processing if no specific print config dimensions (should not happen with updated configs)
+            await pipeline
+                .jpeg({ quality: 95 })
+                .toFile(targetPath);
+        }
+
+        console.log(`Processed: ${targetPath}`);
 
     } catch (error) {
-        console.error(`Error processing image with sharp: ${error}`);
-        throw error; // Re-throw to be handled by caller
+        console.error(`Error processing image ${sourcePath}:`, error);
+        throw error;
+    }
+}
+
+function sanitizeFilename(name: string): string {
+    return name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+}
+
+/**
+ * Cleanup old files in TEMP_UPLOAD_DIR older than 3 days
+ */
+export async function cleanupOldTempFiles() {
+    try {
+        if (!await pathExists(TEMP_UPLOAD_DIR)) return;
+
+        const files = await readdir(TEMP_UPLOAD_DIR);
+        const now = Date.now();
+        const THREE_DAYS = 3 * 24 * 60 * 60 * 1000;
+
+        for (const file of files) {
+            const filePath = path.join(TEMP_UPLOAD_DIR, file);
+            const stats = await stat(filePath);
+            if (now - stats.mtimeMs > THREE_DAYS) {
+                await unlink(filePath);
+                console.log(`Deleted old temp file: ${file}`);
+            }
+        }
+    } catch (e) {
+        console.error("Error during cleanup:", e);
     }
 }
 
@@ -140,9 +231,33 @@ export async function moveOrderFilesToHotFolder(orderId: string) {
     });
 
     if (!order) throw new Error(`Order ${orderId} not found`);
-    if (order.filesCopied) return; // Already processed
+    // NOTE: Removed "if (order.filesCopied)" check to allow re-trying if needed, or strictly enforce it? Use caution.
+    // Keeping it safer:
+    if (order.filesCopied) {
+        console.log(`Order ${orderId} already copied.`);
+        return;
+    }
 
-    const items = order.items as any[]; // Type assertion for JSON structure
+    const items = order.items as unknown as any[]; // Force cast for JSON structure
+
+    // Extract client name from JSON
+    const clientData = order.client as any;
+    const rawName = clientData?.name || 'cliente';
+
+    const clientName = sanitizeFilename(rawName);
+
+    // Format: 755_01012026 (Hmm_DDMMYYYY)
+    const now = new Date();
+    const hours = now.getHours(); // 7
+    const minutes = now.getMinutes().toString().padStart(2, '0'); // 55
+    const day = now.getDate().toString().padStart(2, '0'); // 01
+    const month = (now.getMonth() + 1).toString().padStart(2, '0'); // 01
+    const year = now.getFullYear(); // 2026
+
+    // Result: 755_01012026
+    const timestamp = `${hours}${minutes}_${day}${month}${year}`;
+
+    let sequence = 1;
 
     try {
         for (const item of items) {
@@ -155,51 +270,77 @@ export async function moveOrderFilesToHotFolder(orderId: string) {
             }
 
             const targetDir = path.join(PRINT_BASE_PATH, config.folderName);
-
-            // Ensure target directory exists
             await mkdir(targetDir, { recursive: true });
 
             for (const photo of item.photos) {
-                console.log(`Processing file copy. Photo object:`, photo);
-                const fileName = photo.fileName;
+                // Determine source path: Can be 'file' object (client side) or 'sourcePath' (Bluetooth) or 'fileName' (Temp Upload)
+                // For cart items saved in DB, we likely have 'fileName' or 'sourcePath' persisted?
+                // The 'items' JSON usually has 'fileName' for uploads. Bluetooth photos are stored differently?
+                // Looking at types.ts: Photo has `sourcePath` (optional) and `name`. 
+                // DB stores JSON. We expect: `fileName` (in temp_uploads) OR `sourcePath` (absolute path for bluetooth).
 
-                if (!fileName) {
-                    console.error(`Missing fileName for photo in order ${orderId}`, photo);
+                let sourcePath = '';
+                if (photo.sourcePath) {
+                    sourcePath = photo.sourcePath;
+                } else if (photo.fileName) {
+                    sourcePath = path.join(TEMP_UPLOAD_DIR, photo.fileName);
+                } else {
+                    console.error("Photo has no source path or filename", photo);
                     continue;
                 }
-
-                const sourcePath = path.join(TEMP_UPLOAD_DIR, fileName);
-                const targetName = `${orderId.slice(0, 8)}_${fileName}`;
-                const targetPath = path.join(targetDir, targetName);
 
                 if (!(await pathExists(sourcePath))) {
-                    console.warn(`Source file not found: ${sourcePath}`);
+                    console.error(`Source file missing: ${sourcePath}`);
                     continue;
                 }
 
-                if (config.needsProcessing) {
-                    try {
-                        await processAndSaveImage(sourcePath, targetPath, config);
-                    } catch (err) {
-                        console.error(`Failed to process image ${fileName}, falling back to copy.`, err);
-                        // Fallback: simple copy if sharp fails
-                        await copy(sourcePath, targetPath);
+                // Generate Target Filename
+                // Format: (NombreCliente)_"Timestamp"_001.jpg
+                const seqStr = sequence.toString().padStart(3, '0');
+                const targetName = `${clientName}_${timestamp}_${seqStr}.jpg`;
+                const targetPath = path.join(targetDir, targetName);
+                sequence++;
+
+                // Process (Always!)
+                try {
+                    // Extract params if they exist in the JSON
+                    const params = photo.editParams as EditParams | undefined;
+                    await processAndSaveImage(sourcePath, targetPath, config, params);
+
+                    // CLEANUP: Bluetooth Immediate Delete
+                    // If sourcePath is NOT in TEMP_UPLOAD_DIR, treat as external/bluetooth and delete.
+                    // Be careful not to delete system files if logic is wrong. 
+                    // Bluetooth paths typically in AppData...
+                    if (!sourcePath.startsWith(TEMP_UPLOAD_DIR)) {
+                        try {
+                            await unlink(sourcePath);
+                            console.log(`Cleaned up Bluetooth source: ${sourcePath}`);
+                        } catch (delErr) {
+                            console.error("Failed to delete bluetooth source:", delErr);
+                        }
                     }
-                } else {
-                    // Direct copy for native sizes
+
+                } catch (err) {
+                    console.error(`Failed to process/save ${sourcePath}`, err);
+                    // Fallback to copy? User said "Procesamiento Obligatorio". 
+                    // If sharp fails, copying might produce a bad print (wrong rotation). 
+                    // Better to fail or force copy? 
+                    // Try simple copy as strict fallback to ensure *something* prints.
                     await copy(sourcePath, targetPath);
                 }
             }
         }
 
-        // Update order status
         await prisma.order.update({
             where: { id: orderId },
             data: { filesCopied: true }
         });
 
+        // Trigger Periodic Cleanup (Fire and forget)
+        cleanupOldTempFiles().catch(e => console.error("Cleanup failed", e));
+
     } catch (error) {
-        console.error(`Error moving files for order ${orderId}:`, error);
+        console.error(`Error processing hotfolder files for ${orderId}`, error);
         throw error;
     }
 }

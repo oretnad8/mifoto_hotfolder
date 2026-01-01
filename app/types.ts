@@ -61,7 +61,7 @@ export interface Order {
     customerEmail?: string;
     paymentMethod?: string;
     paidAt?: Date;
-    orderNumber?: string;
+    orderNumber?: number;
 }
 
 export interface PrinterStatus {

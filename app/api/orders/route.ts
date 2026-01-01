@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { moveOrderFilesToHotFolder } from '@/lib/file-service';
 
 export async function POST(request: NextRequest) {
     try {
@@ -13,6 +14,13 @@ export async function POST(request: NextRequest) {
 
         // items should be the cart items with size and photos (containing temp filenames)
 
+        // Calculate next order number
+        const lastOrder = await prisma.order.findFirst({
+            orderBy: { orderNumber: 'desc' },
+            select: { orderNumber: true }
+        });
+        const nextOrderNumber = (lastOrder?.orderNumber ?? 0) + 1;
+
         const order = await prisma.order.create({
             data: {
                 client, // JSON
@@ -20,10 +28,26 @@ export async function POST(request: NextRequest) {
                 total,
                 items, // JSON
                 status: status || 'pending',
+                orderNumber: nextOrderNumber,
             },
         });
 
-        return NextResponse.json({ success: true, orderId: order.id });
+        // Trigger file move asynchronously (fire and forget to not block UI resonse, or await if critical)
+        // User requirements imply "The system copies...", usually we want to confirm it started.
+        // Awaiting it ensures we catch immediate errors, but might slow down the "Order Placed" screen.
+        // However, for a Kiosk, robust feedback is better.
+        // Let's await it to ensure we don't return success if the file copy fails immediately?
+        // Actually, if file copy fails, the order is still "Created" in DB.
+        // Let's fire and forget but log, or just await since local FS is fast.
+
+        try {
+            await moveOrderFilesToHotFolder(order.id);
+        } catch (copyError) {
+            console.error("Warning: Order created but file copy failed", copyError);
+            // We still return success as the order exists, Admin can retry from dashboard
+        }
+
+        return NextResponse.json({ success: true, orderId: order.id, orderNumber: order.orderNumber });
     } catch (error) {
         console.error('Error creating order:', error);
         return NextResponse.json({ error: 'Error processing order' }, { status: 500 });

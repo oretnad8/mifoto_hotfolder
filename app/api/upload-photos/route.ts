@@ -16,15 +16,30 @@ export async function POST(request: NextRequest) {
             console.error('Error creating directory:', err);
         }
 
+        const customNames = formData.getAll('customNames') as string[];
+
+        // Check consistency
+        if (customNames.length > 0 && customNames.length !== files.length) {
+            console.warn("Mismatch between files and customNames count");
+        }
+
         const uploadedFiles = [];
-        for (const file of files) {
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
             const bytes = await file.arrayBuffer();
             const buffer = Buffer.from(bytes);
 
-            // Sanitizar nombre de archivo y agregar timestamp
-            const timestamp = Date.now();
-            const sanitizedOriginalName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-            const fileName = `${timestamp}_${sanitizedOriginalName}`;
+            let fileName;
+            if (customNames[i]) {
+                // Use provided name (security: sanitize directory traversal)
+                fileName = path.basename(customNames[i]);
+            } else {
+                // Sanitizar nombre de archivo y agregar timestamp
+                const timestamp = Date.now();
+                const sanitizedOriginalName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+                fileName = `${timestamp}_${sanitizedOriginalName}`;
+            }
+
             const filePath = path.join(targetFolder, fileName);
 
             await writeFile(filePath, buffer);
