@@ -1,9 +1,13 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+require('dotenv').config(); // Load environment variables
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { machineIdSync } = require('node-machine-id');
+const axios = require('axios');
 const path = require('path');
 const { spawn } = require('child_process');
 
 let mainWindow;
 let bluetoothServerProcess = null;
+let store; // To be initialized dynamically
 
 // Helper to start the server and wait for the "started" event
 function startBluetoothServer() {
@@ -135,7 +139,21 @@ function createWindow() {
     });
 }
 
-app.whenReady().then(() => {
+const LICENSE_API_URL = 'http://dantero.ddns.net:3333/api/validate';
+
+// Lazy load store
+async function getStore() {
+    if (!store) {
+        const { default: Store } = await import('electron-store');
+        store = new Store();
+    }
+    return store;
+}
+
+app.whenReady().then(async () => {
+    // Initialize store
+    await getStore();
+
     // Bluetooth NO se inicia aquí. Se inicia bajo demanda.
     createWindow();
 
@@ -183,4 +201,135 @@ ipcMain.handle('bluetooth-open-wizard', async () => {
 // Other Stubs
 ipcMain.handle('get-removable-drives', async () => { return []; });
 ipcMain.handle('scan-directory', async () => { return []; });
-ipcMain.handle('get-local-ip', async () => { return '127.0.0.1'; });
+const os = require('os');
+
+function getLocalIpAddress() {
+    const interfaces = os.networkInterfaces();
+    const sortedInterfaceNames = Object.keys(interfaces).sort((a, b) => {
+        // Prioritize "Wi-Fi" or "Ethernet" names
+        const aPriority = (a.toLowerCase().includes('wi-fi') || a.toLowerCase().includes('ethernet')) ? -1 : 1;
+        const bPriority = (b.toLowerCase().includes('wi-fi') || b.toLowerCase().includes('ethernet')) ? -1 : 1;
+        return aPriority - bPriority;
+    });
+
+    for (const name of sortedInterfaceNames) {
+        // Skip obvious virtual adapters if possible, though sorting helps
+        if (name.toLowerCase().includes('vmware') || name.toLowerCase().includes('virtual')) continue;
+
+        for (const iface of interfaces[name]) {
+            // Skip over internal (i.e. 127.0.0.1) and non-IPv4 addresses
+            if (iface.family === 'IPv4' && !iface.internal) {
+                // If multiple remain, maybe prefer 192.168.x.x?
+                return iface.address;
+            }
+        }
+    }
+
+    // Fallback: just take the first valid one if we skipped everything (e.g. only virtuals exist)
+    for (const name of Object.keys(interfaces)) {
+        for (const iface of interfaces[name]) {
+            if (iface.family === 'IPv4' && !iface.internal) {
+                return iface.address;
+            }
+        }
+    }
+
+    return '127.0.0.1';
+}
+
+ipcMain.handle('get-local-ip', async () => { return getLocalIpAddress(); });
+
+// --------------------------------------------------------------------------
+// Activation & Security IPC
+// --------------------------------------------------------------------------
+
+ipcMain.handle('get-activation-status', async () => {
+    const s = await getStore();
+    const licenseKey = s.get('licenseKey');
+    const hwid = machineIdSync();
+
+    if (licenseKey) {
+        // Attempt to sync with server to get latest password
+        try {
+            console.log('[License] Syncing with server...');
+            const response = await axios.post(LICENSE_API_URL, {
+                licenseKey: licenseKey,
+                hwid: hwid
+            });
+
+            if (response.data && response.data.valid === true) {
+                // Update password if changed
+                if (response.data.adminPassword) {
+                    const currentPwd = s.get('adminPassword');
+                    if (currentPwd !== response.data.adminPassword) {
+                        console.log('[License] Admin Password updated from server.');
+                        s.set('adminPassword', response.data.adminPassword);
+                    }
+                }
+            } else {
+                console.warn('[License] Server reported invalid license during sync.');
+                // Optionally deactivate? For now, we trust local unless explicit deactivate command.
+            }
+        } catch (err) {
+            console.warn('[License] Sync failed (offline?):', err.message);
+        }
+    }
+
+    return {
+        active: !!licenseKey,
+        licenseKey: licenseKey || null,
+        hwid: hwid
+    };
+});
+
+ipcMain.handle('activate-app', async (event, { licenseKey }) => {
+    console.log('[Activation] Attempting to activate with key:', licenseKey);
+    const hwid = machineIdSync();
+
+    try {
+        // Call the license server
+        const response = await axios.post(LICENSE_API_URL, {
+            licenseKey: licenseKey,
+            hwid: hwid
+        });
+
+        // The server response should now include { valid: true, adminPassword: "..." }
+        if (response.data && response.data.valid === true && response.data.adminPassword) {
+            const s = await getStore();
+            s.set('licenseKey', licenseKey);
+            s.set('adminPassword', response.data.adminPassword);
+
+            console.log('[Activation] Success. Saved to store.');
+            return { success: true };
+        } else {
+            console.warn('[Activation] Server rejected license or missing adminPassword.');
+            return { success: false, error: 'Licencia rechazada o datos incompletos.' };
+        }
+    } catch (err) {
+        console.error('[Activation] Error calling server:', err.message);
+        return { success: false, error: err.message || 'Error de conexión.' };
+    }
+});
+
+ipcMain.handle('verify-admin-pin', async (event, pin) => {
+    const s = await getStore();
+    const saved = s.get('adminPassword');
+
+    console.log('[Security] Verifying Admin PIN');
+    console.log(`[Security] Received: "${pin}" (${typeof pin})`);
+    console.log(`[Security] Stored:   "${saved}" (${typeof saved})`);
+
+    // Safe comparison: Convert both to strings
+    const match = String(saved).trim() === String(pin).trim();
+    console.log(`[Security] Match Result: ${match}`);
+
+    if (!match) {
+        dialog.showMessageBox({
+            type: 'error',
+            title: 'Debug Admin Login',
+            message: `DEBUG INFO (Eliminar en prod):\n\nRecibido: "${pin}" (Type: ${typeof pin})\nGuardado: "${saved}" (Type: ${typeof saved})\n\n¿Coinciden?: ${match}`
+        });
+    }
+
+    return match;
+});
