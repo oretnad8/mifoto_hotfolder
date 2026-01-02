@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { moveOrderFilesToHotFolder } from '@/lib/file-service';
 import { MercadoPagoConfig, Payment } from 'mercadopago';
-
-// Initialize Mercado Pago client
-const client = new MercadoPagoConfig({
-    accessToken: process.env.MP_ACCESS_TOKEN || '',
-});
+import { getMpAccessToken } from '@/lib/mp-config';
 
 export async function POST(req: NextRequest) {
     try {
+        const accessToken = await getMpAccessToken();
+        const client = new MercadoPagoConfig({
+            accessToken: accessToken,
+        });
         const { orderId } = await req.json();
 
         if (!orderId) {

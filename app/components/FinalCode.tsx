@@ -44,8 +44,9 @@ const FinalCode = ({ orderData, onNewOrder }: FinalCodeProps) => {
     });
   };
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('es-CL', {
+  const formatDate = (date: Date | string) => {
+    const dateObj = new Date(date);
+    return dateObj.toLocaleDateString('es-CL', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',

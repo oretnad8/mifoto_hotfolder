@@ -110,6 +110,8 @@ function stopBluetoothServer() {
 }
 
 function createWindow() {
+    const dev = process.env.NODE_ENV === 'development';
+
     mainWindow = new BrowserWindow({
         width: 1200,
         height: 800,
@@ -123,15 +125,55 @@ function createWindow() {
         },
     });
 
-    const dev = process.env.NODE_ENV === 'development';
+    // URL Loading Logic
+    // Priority: 
+    // 1. Configured Subdomain (https://<subdomain>.localfoto.cl)
+    // 2. Localhost HTTPS (https://localhost)
 
-    // Check if we should wait for port or just load?
-    // In dev, usually wait-on handles it.
+    // We need to get the store synchronously or via the helper. 
+    // Since `createWindow` is synchronous usually, we might need to await the store before creating window or just get it here.
+    // However, `getStore` is async. 
+    // Hack: We called `await getStore()` in app.whenReady(), so `store` variable should be populated globally.
+
+    let dbSubdomain = store ? store.get('subdomain') : null;
+    let targetUrl = 'https://localhost'; // Default fallback
+
+    if (dbSubdomain) {
+        targetUrl = `https://${dbSubdomain}.localfoto.cl`;
+        console.log(`[Window] Loading configured subdomain: ${targetUrl}`);
+    } else if (process.env.NEXT_PUBLIC_HOST) {
+        // Fallback from ENV if not in store
+        targetUrl = `https://${process.env.NEXT_PUBLIC_HOST}`;
+        console.log(`[Window] Loading from ENV host: ${targetUrl}`);
+    } else {
+        console.log(`[Window] No subdomain configured. Loading local dev: ${targetUrl}`);
+    }
+
     if (dev) {
-        mainWindow.loadURL('http://localhost:3000');
+        // In dev, we might still want to load the remote URL if that's what we are testing, 
+        // OR we might want localhost. 
+        // The prompt says: "Si tenemos subdominio... la URL a cargar debe ser https://test.localfoto.cl"
+        // It implies this logic applies always.
+
+        // However, invalid SSL on localhost might trigger warnings.
+        mainWindow.loadURL(targetUrl).catch(err => {
+            console.error(`[Window] Failed to load ${targetUrl}:`, err);
+            // Fallback to localhost if remote fails?
+            if (targetUrl !== 'https://localhost') {
+                console.log('[Window] Retrying with https://localhost...');
+                mainWindow.loadURL('https://localhost');
+            }
+        });
+
         mainWindow.webContents.openDevTools();
     } else {
-        mainWindow.loadURL('http://localhost:3000');
+        mainWindow.loadURL(targetUrl).catch(err => {
+            console.error(`[Window] Failed to load ${targetUrl}:`, err);
+            if (targetUrl !== 'https://localhost') {
+                console.log('[Window] Retrying with https://localhost...');
+                mainWindow.loadURL('https://localhost');
+            }
+        });
     }
 
     mainWindow.on('closed', () => {
@@ -149,6 +191,10 @@ async function getStore() {
     }
     return store;
 }
+
+// Ignore certificate errors for self-signed certs (e.g. localhost)
+// specific for "ERR_CERT_COMMON_NAME_INVALID" and others during dev/test
+app.commandLine.appendSwitch('ignore-certificate-errors');
 
 app.whenReady().then(async () => {
     // Initialize store
@@ -331,10 +377,12 @@ ipcMain.handle('get-activation-status', async () => {
         // Attempt to sync with server to get latest password
         try {
             console.log('[License] Syncing with server...');
+            const localIp = getLocalIpAddress();
             const response = await axios.post(LICENSE_API_URL, {
                 licenseKey: licenseKey,
-                hwid: hwid
-            });
+                hwid: hwid,
+                localIp: localIp
+            }, { timeout: 5000 });
 
             if (response.data && response.data.valid === true) {
                 // Update password if changed
@@ -343,6 +391,23 @@ ipcMain.handle('get-activation-status', async () => {
                     if (currentPwd !== response.data.adminPassword) {
                         console.log('[License] Admin Password updated from server.');
                         s.set('adminPassword', response.data.adminPassword);
+                    }
+                }
+                // Save MP Access Token if provided
+                if (response.data.mpAccessToken) {
+                    const currentToken = s.get('mpAccessToken');
+                    if (currentToken !== response.data.mpAccessToken) {
+                        console.log('[License] New Mercado Pago Token received and saved.');
+                        s.set('mpAccessToken', response.data.mpAccessToken);
+                    }
+                }
+
+                // Save Subdomain if provided
+                if (response.data.subdomain) {
+                    const currentSub = s.get('subdomain');
+                    if (currentSub !== response.data.subdomain) {
+                        console.log('[License] Subdomain updated from server.');
+                        s.set('subdomain', response.data.subdomain);
                     }
                 }
             } else {
@@ -367,16 +432,28 @@ ipcMain.handle('activate-app', async (event, { licenseKey }) => {
 
     try {
         // Call the license server
+        const localIp = getLocalIpAddress();
         const response = await axios.post(LICENSE_API_URL, {
             licenseKey: licenseKey,
-            hwid: hwid
-        });
+            hwid: hwid,
+            localIp: localIp
+        }, { timeout: 8000 });
 
         // The server response should now include { valid: true, adminPassword: "..." }
         if (response.data && response.data.valid === true && response.data.adminPassword) {
             const s = await getStore();
             s.set('licenseKey', licenseKey);
             s.set('adminPassword', response.data.adminPassword);
+
+            if (response.data.mpAccessToken) {
+                s.set('mpAccessToken', response.data.mpAccessToken);
+                console.log('[Activation] MP Token saved.');
+            }
+
+            if (response.data.subdomain) {
+                s.set('subdomain', response.data.subdomain);
+                console.log('[Activation] Subdomain saved.');
+            }
 
             console.log('[Activation] Success. Saved to store.');
             return { success: true };

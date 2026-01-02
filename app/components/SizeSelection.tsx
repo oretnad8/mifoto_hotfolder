@@ -16,7 +16,7 @@ const SizeSelection = ({ onSizeSelect, onBack }: SizeSelectionProps) => {
       id: 'kiosco',
       name: 'Foto Kiosco',
       dimensions: '10x15 cm (4x6 pulgadas)',
-      price: '1000',
+      price: '10',
       width: 15,
       height: 10,
       gradient: 'from-pink-400 via-red-500 to-pink-300',
@@ -26,7 +26,7 @@ const SizeSelection = ({ onSizeSelect, onBack }: SizeSelectionProps) => {
       id: 'medium',
       name: 'Foto Kiosco',
       dimensions: '13x18 cm (5x7 pulgadas)',
-      price: '1500',
+      price: '15',
       width: 18,
       height: 13,
       gradient: 'from-teal-400 via-blue-500 to-blue-600'
@@ -44,7 +44,7 @@ const SizeSelection = ({ onSizeSelect, onBack }: SizeSelectionProps) => {
       id: 'square-small',
       name: 'Foto Kiosco',
       dimensions: '13x13 cm (5x5 pulgadas)',
-      price: '1200',
+      price: '12',
       width: 13,
       height: 13,
       gradient: 'from-orange-300 via-yellow-400 to-red-400'
@@ -53,7 +53,7 @@ const SizeSelection = ({ onSizeSelect, onBack }: SizeSelectionProps) => {
       id: 'square-large',
       name: 'Foto Kiosco',
       dimensions: '15x15 cm (6x6 pulgadas)',
-      price: '1800',
+      price: '18',
       width: 15,
       height: 15,
       gradient: 'from-indigo-400 via-purple-500 to-pink-400'

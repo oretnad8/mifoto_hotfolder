@@ -2,11 +2,13 @@
 import { MercadoPagoConfig, Payment } from 'mercadopago';
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-
-const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN! });
+import { getMpAccessToken } from '@/lib/mp-config';
 
 export async function POST(req: NextRequest) {
     try {
+        const accessToken = await getMpAccessToken();
+        const client = new MercadoPagoConfig({ accessToken: accessToken });
+
         const body = await req.json();
         const { type, data } = body;
 

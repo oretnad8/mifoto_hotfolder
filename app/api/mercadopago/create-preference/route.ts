@@ -1,8 +1,8 @@
 import { networkInterfaces } from 'os';
 import { MercadoPagoConfig, Preference } from 'mercadopago';
 import { NextRequest, NextResponse } from 'next/server';
+import { getMpAccessToken } from '@/lib/mp-config';
 
-const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN! });
 function getLocalIp() {
     const interfaces = networkInterfaces();
     const sortedInterfaceNames = Object.keys(interfaces).sort((a, b) => {
@@ -27,40 +27,59 @@ function getLocalIp() {
 
 export async function POST(req: NextRequest) {
     try {
+        const accessToken = await getMpAccessToken();
+        const client = new MercadoPagoConfig({ accessToken: accessToken });
+
         const body = await req.json();
-        const { items, metadata, isElectron, external_reference } = body;
+        const { items, metadata, external_reference } = body;
 
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+        // Detección Dinámica del Host (Unified for Mobile & Electron)
+        const origin = req.headers.get('origin');
+        const host = req.headers.get('host');
+        const protocol = req.headers.get('x-forwarded-proto') || 'https';
 
-        if (!baseUrl) {
-            console.error("NEXT_PUBLIC_BASE_URL is not defined in environment variables");
-            return NextResponse.json({ error: "Server configuration error: NEXT_PUBLIC_BASE_URL missing" }, { status: 500 });
+        let sanitizedBaseUrl = origin;
+
+        if (!sanitizedBaseUrl && host) {
+            sanitizedBaseUrl = `${protocol}://${host}`;
         }
 
-        let sanitizedBaseUrl;
+        // Fallback
+        if (!sanitizedBaseUrl) {
+            const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+            if (!baseUrl) {
+                // Last resort fallback
+                sanitizedBaseUrl = 'http://localhost:3000';
+            } else {
+                sanitizedBaseUrl = baseUrl;
+            }
+        }
 
-        if (isElectron) {
-            // Electron Native Modal: Use intercepted dummy URL
-            sanitizedBaseUrl = 'https://mifoto-hotfolder-dummy.com';
-            console.log("Environment: ELECTRON (Using dummy URL)");
-        } else {
-            // Mobile / Web: Use real public URL (must be accessible from mobile)
-            // Replace localhost with actual LAN IP
+        // Localhost replacement for mobile access
+        if (sanitizedBaseUrl && (sanitizedBaseUrl.includes('localhost') || sanitizedBaseUrl.includes('127.0.0.1'))) {
             const localIp = getLocalIp();
-            sanitizedBaseUrl = baseUrl.replace('localhost', localIp).replace('127.0.0.1', localIp);
-            console.log(`Environment: MOBILE/WEB (Replacing localhost with ${localIp})`);
+            sanitizedBaseUrl = sanitizedBaseUrl.replace('localhost', localIp).replace('127.0.0.1', localIp);
+            console.log(`Environment: LOCAL DEV (Replacing localhost with ${localIp})`);
+        } else {
+            console.log(`Environment: PRODUCTION (Domain: ${sanitizedBaseUrl})`);
         }
+
+        if (!sanitizedBaseUrl) {
+            console.error("Unable to determine Base URL");
+            return NextResponse.json({ error: "Server configuration error: Base URL missing" }, { status: 500 });
+        }
+
+        console.log(`Dynamic Base URL configured: ${sanitizedBaseUrl}`);
 
         const successUrl = `${sanitizedBaseUrl}/checkout/status`;
         const failureUrl = `${sanitizedBaseUrl}/checkout/status`;
         const pendingUrl = `${sanitizedBaseUrl}/checkout/status`;
 
-        console.log("Using Back URLs (Sanitized/Dummy):", { success: successUrl, failure: failureUrl, pending: pendingUrl });
-        console.log("MP_ACCESS_TOKEN:", process.env.MP_ACCESS_TOKEN ? "Loaded" : "Missing");
+        console.log("Using Back URLs:", { success: successUrl, failure: failureUrl, pending: pendingUrl });
+        console.log("MP_ACCESS_TOKEN source:", accessToken === process.env.MP_ACCESS_TOKEN ? "ENV" : "Dynamic Config");
 
         const preference = new Preference(client);
 
-        // @ts-ignore
         // @ts-ignore
         const preferenceData: any = {
             items: items,
@@ -70,15 +89,10 @@ export async function POST(req: NextRequest) {
                 failure: failureUrl,
                 pending: pendingUrl,
             },
-            binary_mode: true, // Force immediate decision (approved/rejected)
+            auto_return: 'approved', // Enabled for everyone
+            binary_mode: true, // Enabled for everyone
             metadata: metadata,
         };
-
-        // Only enable auto_return for Electron.
-        // Mercado Pago rejects auto_return for local IPs (192.168.x.x) or http.
-        if (isElectron) {
-            preferenceData.auto_return = 'approved';
-        }
 
         const result = await preference.create({
             body: preferenceData,

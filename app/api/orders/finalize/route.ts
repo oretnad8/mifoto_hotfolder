@@ -1,6 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { moveOrderFilesToHotFolder } from '@/lib/file-service';
+import fs from 'fs';
+import path from 'path';
+
+function getKioskConfig() {
+    try {
+        // En Windows el config.json suele estar en APPDATA
+        const appData = process.env.APPDATA;
+        if (appData) {
+            const configPath = path.join(appData, 'mifoto-hotfolder', 'config.json');
+            if (fs.existsSync(configPath)) {
+                const fileContent = fs.readFileSync(configPath, 'utf-8');
+                const config = JSON.parse(fileContent);
+                return {
+                    name: config.kioskName || 'Kiosco Mifoto',
+                    address: config.kioskAddress || 'Sucursal Principal'
+                };
+            }
+        }
+    } catch (e) {
+        console.warn('Failed to read kiosk config:', e);
+    }
+
+    return { name: 'Kiosco Mifoto', address: 'Sucursal Principal' };
+}
 
 export async function POST(request: NextRequest) {
     try {
@@ -21,11 +45,17 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Order not found' }, { status: 404 });
         }
 
+        // Configuration for response (always needed regardless of status)
+        const kioskConfig = getKioskConfig();
+
         // If already paid, return success (idempotency)
         if (order.status === 'paid') {
             return NextResponse.json({
                 success: true,
-                order: order,
+                order: {
+                    ...order,
+                    kiosk: kioskConfig
+                },
                 alreadyPaid: true
             });
         }
@@ -51,7 +81,10 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
             success: true,
-            order: updatedOrder
+            order: {
+                ...updatedOrder,
+                kiosk: kioskConfig
+            }
         });
 
     } catch (error) {

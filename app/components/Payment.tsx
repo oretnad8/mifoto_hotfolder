@@ -143,8 +143,8 @@ const Payment = ({ orderData, onPaymentSuccess, onBack }: PaymentProps) => {
 
       const data = await response.json();
 
-      // Prioritize sandbox for debugging if available, otherwise use production
-      const redirectUrl = data.sandbox_init_point || data.init_point;
+      // Use production init_point by default. Fallback to sandbox only if prod is missing.
+      const redirectUrl = data.init_point || data.sandbox_init_point;
 
       if (redirectUrl) {
         console.log('Opening Mercado Pago Modal:', redirectUrl);

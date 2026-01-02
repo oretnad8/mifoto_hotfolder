@@ -4,10 +4,11 @@
   "private": true,
   "main": "electron-main.js",
   "scripts": {
-    "dev": "cross-env NODE_ENV=development next dev -H 0.0.0.0 -p 3000",
+    "dev": "node server.js",
     "build": "next build",
     "lint": "next lint",
-    "app:windows": "concurrently \"npm run dev\" \"wait-on tcp:3000 && electron .\""
+    "start": "cross-env NODE_ENV=production node server.js",
+    "app:windows": "concurrently \"npm run dev\" \"wait-on tcp:443 && electron .\""
   },
   "dependencies": {
     "@prisma/client": "^6.19.1",

@@ -232,11 +232,11 @@ const PhotoUpload = ({ selectedSize, onPhotosUploaded, onBack }: PhotoUploadProp
             className="flex items-center gap-2 text-[#2D3A52] hover:text-[#D75F1E] transition-colors duration-200 whitespace-nowrap"
           >
             <i className="ri-arrow-left-line text-xl"></i>
-            <span className="text-lg font-medium">Volver</span>
+            <span className="text-base sm:text-lg font-medium">Volver</span>
           </button>
 
           <div className="text-center flex-1">
-            <h1 className="text-3xl font-bold text-[#2D3A52] mb-2">Carga tus Fotos</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-[#2D3A52] mb-2">Carga tus Fotos</h1>
             <p className="text-lg text-[#2D3A52]/70">Selecciona los recuerdos desde tu Galería</p>
           </div>
 
