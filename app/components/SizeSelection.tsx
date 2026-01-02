@@ -1,7 +1,8 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Size } from '../types';
+import { getProducts } from '../actions/products';
 
 interface SizeSelectionProps {
   onSizeSelect: (size: Size) => void;
@@ -10,55 +11,35 @@ interface SizeSelectionProps {
 
 const SizeSelection = ({ onSizeSelect, onBack }: SizeSelectionProps) => {
   const [selectedSize, setSelectedSize] = useState<Size | null>(null);
+  const [sizes, setSizes] = useState<Size[]>([]);
 
-  const sizes: Size[] = [
-    {
-      id: 'kiosco',
-      name: 'Foto Kiosco',
-      dimensions: '10x15 cm (4x6 pulgadas)',
-      price: '10',
-      width: 15,
-      height: 10,
-      gradient: 'from-pink-400 via-red-500 to-pink-300',
-      requiresEven: true
-    },
-    {
-      id: 'medium',
-      name: 'Foto Kiosco',
-      dimensions: '13x18 cm (5x7 pulgadas)',
-      price: '15',
-      width: 18,
-      height: 13,
-      gradient: 'from-teal-400 via-blue-500 to-blue-600'
-    },
-    {
-      id: 'large',
-      name: 'Foto Kiosco',
-      dimensions: '15x20 cm (6x8 pulgadas)',
-      price: '20',
-      width: 20,
-      height: 15,
-      gradient: 'from-purple-300 via-pink-300 to-purple-400'
-    },
-    {
-      id: 'square-small',
-      name: 'Foto Kiosco',
-      dimensions: '13x13 cm (5x5 pulgadas)',
-      price: '12',
-      width: 13,
-      height: 13,
-      gradient: 'from-orange-300 via-yellow-400 to-red-400'
-    },
-    {
-      id: 'square-large',
-      name: 'Foto Kiosco',
-      dimensions: '15x15 cm (6x6 pulgadas)',
-      price: '18',
-      width: 15,
-      height: 15,
-      gradient: 'from-indigo-400 via-purple-500 to-pink-400'
+  const getGradientForSku = (sku: string) => {
+    switch (sku) {
+      case 'kiosco': return 'from-pink-400 via-red-500 to-pink-300';
+      case 'medium': return 'from-teal-400 via-blue-500 to-blue-600';
+      case 'large': return 'from-purple-300 via-pink-300 to-purple-400';
+      case 'square-small': return 'from-orange-300 via-yellow-400 to-red-400';
+      case 'square-large': return 'from-indigo-400 via-purple-500 to-pink-400';
+      default: return 'from-gray-300 via-gray-400 to-gray-500';
     }
-  ];
+  };
+
+  useEffect(() => {
+    getProducts().then((products: any[]) => {
+      // Map DB products to Size interface
+      const mappedSizes: Size[] = products.map(p => ({
+        id: p.sku,
+        name: p.name,
+        dimensions: p.description,
+        price: p.price.toString(),
+        width: p.width,
+        height: p.height,
+        gradient: getGradientForSku(p.sku),
+        requiresEven: p.sku === 'kiosco' // legacy logic preservation if needed
+      }));
+      setSizes(mappedSizes);
+    });
+  }, []);
 
   const handleSizeClick = (size: Size) => {
     setSelectedSize(size);

@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 
 interface AdminLoginProps {
-    onLogin: () => void;
+    onLogin: (role: string) => void;
 }
 
 export default function AdminLogin({ onLogin }: AdminLoginProps) {
@@ -26,7 +26,7 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
             const data = await res.json();
 
             if (res.ok && data.success) {
-                onLogin();
+                onLogin(data.role);
             } else {
                 console.error('Login failed:', data.error);
                 setError(true);

@@ -8,11 +8,25 @@ interface CategoryScreenProps {
   onCategorySelect: (category: string) => void;
 }
 
+import { getBrandingSettings } from '../actions/settings';
+
 const CategoryScreen = ({ onCategorySelect }: CategoryScreenProps) => {
   const [hoveredCard, setHoveredCard] = useState(false);
   const [qrUrl, setQrUrl] = useState<string | null>(null);
+  const [branding, setBranding] = useState<{ logo?: string, welcome?: string }>({});
 
   useEffect(() => {
+    const loadBranding = async () => {
+      const settings = await getBrandingSettings();
+      if (settings) {
+        setBranding({
+          logo: settings.brandingLogoPath || undefined,
+          welcome: settings.brandingWelcomeText || undefined
+        });
+      }
+    };
+    loadBranding();
+
     const setDynamicUrl = async () => {
       // @ts-ignore
       const isElectron = typeof window !== 'undefined' && window.electron;
@@ -52,7 +66,7 @@ const CategoryScreen = ({ onCategorySelect }: CategoryScreenProps) => {
           {/* Logo */}
           <div className="mb-4 sm:mb-0 sm:mr-20">
             <img
-              src="https://static.readdy.ai/image/cb6ca7f6c3078da1085a9be5e4fc7971/2248c47c3211d3f4612acd37afbad761.png"
+              src={branding.logo || "https://static.readdy.ai/image/cb6ca7f6c3078da1085a9be5e4fc7971/2248c47c3211d3f4612acd37afbad761.png"}
               alt="MiFoto Logo"
               className="h-20 sm:h-32 w-auto mx-auto sm:mx-0 animate-pulse"
               style={{
@@ -64,7 +78,7 @@ const CategoryScreen = ({ onCategorySelect }: CategoryScreenProps) => {
           {/* Texto de bienvenida */}
           <div className="text-center sm:text-left">
             <p className="text-lg sm:text-3xl text-[#2D3A52] font-bold mb-2 sm:mb-4 leading-tight">
-              Bienvenido a la experiencia Mi foto Gift
+              {branding.welcome || "Bienvenido a la experiencia Mi foto Gift"}
             </p>
             <p className="text-sm sm:text-lg text-[#2D3A52]/70">¿Qué deseas imprimir hoy?</p>
           </div>

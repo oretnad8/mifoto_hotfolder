@@ -23,3 +23,27 @@ model Order {
   @@map("orders")
   @@index([createdAt])
 }
+
+model KioskConfig {
+  id                  Int      @id @default(1)
+  brandingLogoPath    String?  @map("branding_logo_path")
+  brandingWelcomeText String?  @map("branding_welcome_text")
+  validatorPassword   String?  @map("validator_password")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@map("kiosk_config")
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  price       Float
+  width       Float
+  height      Float
+  sku         String   @unique
+  active      Boolean  @default(true)
+  updatedAt   DateTime @updatedAt
+  
+  @@map("products")
+}

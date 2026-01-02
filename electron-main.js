@@ -373,6 +373,8 @@ ipcMain.handle('get-activation-status', async () => {
     const licenseKey = s.get('licenseKey');
     const hwid = machineIdSync();
 
+    let extraConfig = {};
+
     if (licenseKey) {
         // Attempt to sync with server to get latest password
         try {
@@ -385,6 +387,8 @@ ipcMain.handle('get-activation-status', async () => {
             }, { timeout: 5000 });
 
             if (response.data && response.data.valid === true) {
+                console.log('[License] FULL SERVER RESPONSE:', JSON.stringify(response.data, null, 2));
+
                 // Update password if changed
                 if (response.data.adminPassword) {
                     const currentPwd = s.get('adminPassword');
@@ -410,6 +414,14 @@ ipcMain.handle('get-activation-status', async () => {
                         s.set('subdomain', response.data.subdomain);
                     }
                 }
+
+                // Extra config for SQLite
+                extraConfig = {
+                    clientLogoUrl: response.data.clientLogoUrl,
+                    welcomeText: response.data.welcomeText,
+                    validatorPassword: response.data.validatorPassword
+                };
+
             } else {
                 console.warn('[License] Server reported invalid license during sync.');
                 // Optionally deactivate? For now, we trust local unless explicit deactivate command.
@@ -422,7 +434,8 @@ ipcMain.handle('get-activation-status', async () => {
     return {
         active: !!licenseKey,
         licenseKey: licenseKey || null,
-        hwid: hwid
+        hwid: hwid,
+        ...extraConfig
     };
 });
 
@@ -441,6 +454,8 @@ ipcMain.handle('activate-app', async (event, { licenseKey }) => {
 
         // The server response should now include { valid: true, adminPassword: "..." }
         if (response.data && response.data.valid === true && response.data.adminPassword) {
+            console.log('[Activation] FULL SERVER RESPONSE:', JSON.stringify(response.data, null, 2));
+
             const s = await getStore();
             s.set('licenseKey', licenseKey);
             s.set('adminPassword', response.data.adminPassword);
@@ -456,7 +471,13 @@ ipcMain.handle('activate-app', async (event, { licenseKey }) => {
             }
 
             console.log('[Activation] Success. Saved to store.');
-            return { success: true };
+
+            return {
+                success: true,
+                clientLogoUrl: response.data.clientLogoUrl,
+                welcomeText: response.data.welcomeText,
+                validatorPassword: response.data.validatorPassword
+            };
         } else {
             console.warn('[Activation] Server rejected license or missing adminPassword.');
             return { success: false, error: 'Licencia rechazada o datos incompletos.' };

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import ActivationWizard from "./ActivationWizard";
+import { saveValidationSettings } from "@/app/actions/settings";
 
 export default function ActivationGuard({
     children,
@@ -15,8 +16,16 @@ export default function ActivationGuard({
         if (typeof window !== "undefined" && window.electron) {
             window.electron
                 .getActivationStatus()
-                .then((res: any) => {
+                .then(async (res: any) => {
                     if (res.active) {
+                        console.log(">>>>>>>> [ActivationGuard] App is active. Syncing settings. Data from Electron:", res);
+                        // Sync settings in background
+                        saveValidationSettings({
+                            clientLogoUrl: res.clientLogoUrl,
+                            welcomeText: res.welcomeText,
+                            validatorPassword: res.validatorPassword
+                        }).catch(console.error);
+
                         setStatus("active");
                     } else {
                         setStatus("inactive");

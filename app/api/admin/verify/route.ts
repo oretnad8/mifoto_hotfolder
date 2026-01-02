@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import path from 'path';
 import fs from 'fs/promises';
 import os from 'os';
+import { prisma } from '@/lib/db';
 
 export async function POST(request: Request) {
     try {
@@ -34,10 +35,28 @@ export async function POST(request: Request) {
 
             console.log('[API] Saved Password found:', !!savedPassword);
 
-            // Compare
-            // Simple string comparison
+
+            let role = null;
+
+            // Check Admin Password (from config.json)
             if (String(savedPassword).trim() === String(password).trim()) {
-                return NextResponse.json({ success: true });
+                role = 'admin';
+            }
+
+            if (!role) {
+                const kioskConfig = await (prisma as any).kioskConfig.findFirst({
+                    where: { id: 1 }
+                });
+
+                if (kioskConfig && kioskConfig.validatorPassword) {
+                    if (String(kioskConfig.validatorPassword).trim() === String(password).trim()) {
+                        role = 'validator';
+                    }
+                }
+            }
+
+            if (role) {
+                return NextResponse.json({ success: true, role });
             } else {
                 return NextResponse.json({ success: false, error: 'Invalid password' }, { status: 401 });
             }

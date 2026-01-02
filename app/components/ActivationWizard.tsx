@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 
+import { saveValidationSettings } from "@/app/actions/settings";
+
 export default function ActivationWizard() {
     const [licenseKey, setLicenseKey] = useState("");
     const [hwid, setHwid] = useState("Cargando...");
@@ -11,8 +13,16 @@ export default function ActivationWizard() {
     useEffect(() => {
         // Get HWID for display
         if (typeof window !== "undefined" && window.electron) {
-            window.electron.getActivationStatus().then((status: any) => {
+            window.electron.getActivationStatus().then(async (status: any) => {
                 if (status.hwid) setHwid(status.hwid);
+                // If active and we have extra config, sync it
+                if (status.active) {
+                    await saveValidationSettings({
+                        clientLogoUrl: status.clientLogoUrl,
+                        welcomeText: status.welcomeText,
+                        validatorPassword: status.validatorPassword
+                    });
+                }
             });
         }
     }, []);
@@ -27,11 +37,19 @@ export default function ActivationWizard() {
                 throw new Error("Electron API not found");
             }
 
-            const result = await window.electron.activateApp({
+            const result: any = await window.electron.activateApp({
                 licenseKey
             });
 
             if (result.success) {
+                console.log(">>>>>>>> [ActivationWizard] Activation SUCCESS. Data from Electron:", result);
+                // Save settings locally
+                await saveValidationSettings({
+                    clientLogoUrl: result.clientLogoUrl,
+                    welcomeText: result.welcomeText,
+                    validatorPassword: result.validatorPassword
+                });
+
                 // Success! Reload or notify parent.
                 // Prompt says "recarga la página o oculta el modal". Reload is safest to ensure fresh state.
                 window.location.reload();
@@ -88,8 +106,8 @@ export default function ActivationWizard() {
                             type="submit"
                             disabled={loading}
                             className={`w-full py-3 px-4 rounded-lg text-white font-medium transition-colors shadow-sm ${loading
-                                    ? "bg-blue-400 cursor-not-allowed"
-                                    : "bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-200"
+                                ? "bg-blue-400 cursor-not-allowed"
+                                : "bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-200"
                                 }`}
                         >
                             {loading ? (
