@@ -203,6 +203,85 @@ ipcMain.handle('get-removable-drives', async () => { return []; });
 ipcMain.handle('scan-directory', async () => { return []; });
 const os = require('os');
 
+ipcMain.handle('open-payment-modal', async (event, url) => {
+    console.log('[Payment] Opening payment modal for URL:', url);
+
+    if (!mainWindow) {
+        return { success: false, error: 'Main window not found' };
+    }
+
+    const paymentWin = new BrowserWindow({
+        parent: mainWindow,
+        modal: true,
+        width: 1000,
+        height: 700,
+        show: false,
+        frame: false, // Frameless window as requested
+        webPreferences: {
+            nodeIntegration: false,
+            contextIsolation: true,
+            sandbox: true,
+            enableRemoteModule: false
+        }
+    });
+
+    paymentWin.setMenu(null);
+    paymentWin.loadURL(url);
+
+    paymentWin.once('ready-to-show', () => {
+        paymentWin.show();
+    });
+
+    // Check URL on logic
+    const handleUrl = (url) => {
+        console.log('[Payment] Checking URL:', url);
+
+        if (url && url.includes('/checkout/status')) {
+            const urlObj = new URL(url);
+            const status = urlObj.searchParams.get('collection_status');
+
+            console.log(`[Payment] Payment flow ended. Status: ${status}`);
+
+            if (status === 'approved') {
+                mainWindow.webContents.send('payment-success', { status: 'approved' });
+            } else {
+                mainWindow.webContents.send('payment-error', { error: `Payment status: ${status}` });
+            }
+            paymentWin.close();
+            return true; // Handled
+        }
+        return false;
+    };
+
+    // 1. Successful Navigation
+    paymentWin.webContents.on('did-navigate', (event, url) => handleUrl(url));
+
+    // 2. Redirects (30x)
+    paymentWin.webContents.on('will-redirect', (event, url) => {
+        if (handleUrl(url)) event.preventDefault();
+    });
+
+    // 3. User Navigation (clicking link or script)
+    paymentWin.webContents.on('will-navigate', (event, url) => {
+        if (handleUrl(url)) event.preventDefault();
+    });
+
+    // 4. Failed Loads (like our dummy domain ERR_NAME_NOT_RESOLVED)
+    paymentWin.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+        console.log('[Payment] Page failed to load:', validatedURL, errorDescription);
+        handleUrl(validatedURL);
+    });
+
+    // Optional: Handle user closing the window manually
+    paymentWin.on('closed', () => {
+        console.log('[Payment] Modal closed.');
+        // We might want to notify the main window that it was closed without explicit success
+        // but often 'pending' state in UI is enough until explicit success/fail.
+    });
+
+    return { success: true };
+});
+
 function getLocalIpAddress() {
     const interfaces = os.networkInterfaces();
     const sortedInterfaceNames = Object.keys(interfaces).sort((a, b) => {

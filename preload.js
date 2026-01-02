@@ -12,6 +12,22 @@ contextBridge.exposeInMainWorld('electron', {
     activateApp: (data) => ipcRenderer.invoke('activate-app', data),
     verifyAdminPin: (pin) => ipcRenderer.invoke('verify-admin-pin', pin),
 
+    // Payment
+    openPaymentModal: (url) => ipcRenderer.invoke('open-payment-modal', url),
+    onPaymentResult: (callback) => {
+        const successHandler = (_, data) => callback({ type: 'success', data });
+        const errorHandler = (_, data) => callback({ type: 'error', data });
+
+        ipcRenderer.on('payment-success', successHandler);
+        ipcRenderer.on('payment-error', errorHandler);
+
+        // Return unsubscribe function
+        return () => {
+            ipcRenderer.removeListener('payment-success', successHandler);
+            ipcRenderer.removeListener('payment-error', errorHandler);
+        };
+    },
+
     // Bluetooth Bridge
     startBluetooth: () => ipcRenderer.invoke('bluetooth-start-listening'),
     stopBluetooth: () => ipcRenderer.invoke('bluetooth-stop-listening'),

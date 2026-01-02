@@ -63,13 +63,19 @@ async function processAndSaveImage(
 
     try {
         const inputBuffer = await sharp(sourcePath).toBuffer();
-        let pipeline = sharp(inputBuffer);
 
-        // 1. apply rotation first to establish dimensions
+        // STAGE 1: Normalize Orientation (Handle EXIF)
+        // We always perform an auto-rotate first so we start from the same "Upright" state the browser sees.
+        // Sharp's .rotate(angle) OVERRIDES .rotate() (auto), so we must do them in steps if we want both.
+        let pipeline = sharp(inputBuffer).rotate();
+
+        const uprightBuffer = await pipeline.toBuffer();
+        pipeline = sharp(uprightBuffer);
+
+        // STAGE 2: User Edits (Rotation)
         if (params?.rotation) {
-            pipeline = pipeline.rotate(params.rotation);
-        } else {
-            pipeline = pipeline.rotate(); // Auto based on EXIF
+            // Apply user rotation on top of the upright image
+            pipeline = pipeline.rotate(params.rotation, { background: '#ffffff' });
         }
 
         // We MUST realize the buffer here to get reliable dimensions for checking crop validity
@@ -97,27 +103,38 @@ async function processAndSaveImage(
                 pipeline = pipeline.linear(slope, intercept);
             }
 
-            // 3. Crop
+            // 3. Crop (Robust Composite Method)
             if (params.crop) {
-                // Validate bounds!
-                let { x, y, width, height } = params.crop;
+                const x = Math.round(params.crop.x);
+                const y = Math.round(params.crop.y);
+                const w = Math.round(params.crop.width);
+                const h = Math.round(params.crop.height);
 
-                // Sanitize / Clamp
-                x = Math.max(0, x);
-                y = Math.max(0, y);
-                // Ensure we don't go OOB
-                if (x + width > imgW) width = Math.max(1, imgW - x);
-                if (y + height > imgH) height = Math.max(1, imgH - y);
+                console.log(`[ImageProc] Params:`, JSON.stringify(params));
+                console.log(`[ImageProc] Buffer Dims: ${imgW}x${imgH}`);
+                console.log(`[ImageProc] Crop Request: x=${x}, y=${y}, w=${w}, h=${h}`);
 
-                // Only extract if valid area remains
-                if (width > 0 && height > 0) {
-                    pipeline = pipeline.extract({
-                        left: Math.round(x),
-                        top: Math.round(y),
-                        width: Math.round(width),
-                        height: Math.round(height)
-                    });
-                }
+                // Proceed with crop using Composition (safest way to handle OOB/Padding)
+                // We create a canvas of the TARGET crop size
+                // And we composite the image shifted by -x, -y
+                // This automatically handles "padding" with white background where image is missing
+
+                // Need to buffer current state
+                const currentBuffer = await pipeline.toBuffer();
+
+                pipeline = sharp({
+                    create: {
+                        width: Math.max(1, w),
+                        height: Math.max(1, h),
+                        channels: 4,
+                        background: { r: 255, g: 255, b: 255, alpha: 1 }
+                    }
+                })
+                    .composite([{
+                        input: currentBuffer,
+                        left: -x,
+                        top: -y
+                    }]);
             }
         }
 

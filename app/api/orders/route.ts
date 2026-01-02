@@ -40,11 +40,16 @@ export async function POST(request: NextRequest) {
         // Actually, if file copy fails, the order is still "Created" in DB.
         // Let's fire and forget but log, or just await since local FS is fast.
 
-        try {
-            await moveOrderFilesToHotFolder(order.id);
-        } catch (copyError) {
-            console.error("Warning: Order created but file copy failed", copyError);
-            // We still return success as the order exists, Admin can retry from dashboard
+        // Trigger file move ONLY if status is 'paid' (or confirmed)
+        // For mobile flow, we create 'pending_payment' first, then confirm later.
+        if (order.status === 'paid') {
+            try {
+                await moveOrderFilesToHotFolder(order.id);
+            } catch (copyError) {
+                console.error("Warning: Order created but file copy failed", copyError);
+            }
+        } else {
+            console.log(`Order ${order.orderNumber} created with status ${order.status}. Waiting for payment to move files.`);
         }
 
         return NextResponse.json({ success: true, orderId: order.id, orderNumber: order.orderNumber });

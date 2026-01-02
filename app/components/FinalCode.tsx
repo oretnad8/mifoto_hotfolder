@@ -13,12 +13,28 @@ const FinalCode = ({ orderData, onNewOrder }: FinalCodeProps) => {
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
+    // Clock timer
     const timer = setInterval(() => {
       setCurrentTime(new Date());
     }, 1000);
 
-    return () => clearInterval(timer);
-  }, []);
+    // Auto-redirect timer (only if Electron or if desired for all)
+    // The user specifically asked "in the app electron", checking for window.electron is safest
+    let redirectTimer: NodeJS.Timeout;
+
+    if (typeof window !== 'undefined' && (window as any).electron) {
+      console.log('Electron detected, setting auto-redirect timer for 8 seconds');
+      redirectTimer = setTimeout(() => {
+        console.log('Auto-redirecting to main menu...');
+        onNewOrder();
+      }, 8000);
+    }
+
+    return () => {
+      clearInterval(timer);
+      if (redirectTimer) clearTimeout(redirectTimer);
+    };
+  }, [onNewOrder]);
 
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString('es-CL', {

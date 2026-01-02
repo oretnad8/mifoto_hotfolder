@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Pacifico } from "next/font/google";
 import "./globals.css";
 import PrinterMonitor from "./components/PrinterMonitor";
+import PaymentWatcher from "./components/PaymentWatcher";
 import ActivationGuard from "./components/ActivationGuard";
 
 const pacifico = Pacifico({
@@ -37,6 +38,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${pacifico.variable} antialiased`}
       >
         <ActivationGuard>
+          <PaymentWatcher />
           {children}
           <PrinterMonitor />
         </ActivationGuard>

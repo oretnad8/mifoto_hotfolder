@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Order } from '../types';
 
 interface PaymentProps {
@@ -13,15 +13,121 @@ const Payment = ({ orderData, onPaymentSuccess, onBack }: PaymentProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('cash');
 
+  // Listen for payment results from Electron Main process
+  useEffect(() => {
+    // Check if running in Electron and if API exists
+    if (typeof window !== 'undefined' && (window as any).electron && (window as any).electron.onPaymentResult) {
+      console.log('Registering payment result listener...');
+      const unsubscribe = (window as any).electron.onPaymentResult((result: any) => {
+        console.log('Payment Result Received:', result);
+
+        if (result.type === 'success') {
+          // Payment approved
+          const paidOrder = {
+            ...orderData,
+            status: 'paid',
+            paidAt: new Date(),
+            paymentMethod: 'mercadopago'
+          };
+          onPaymentSuccess(paidOrder);
+        } else {
+          // Failure or error
+          setIsProcessing(false);
+          alert('El pago no se pudo completar o fue cancelado.');
+        }
+      });
+
+      return () => {
+        if (unsubscribe) unsubscribe();
+      };
+    }
+  }, [onPaymentSuccess, orderData]);
+
+  // Duplicate of upload logic from page.tsx to handle mobile redirects
+  const uploadPhotos = async (items: any[]) => {
+    let globalSequence = 1;
+    const rawName = orderData.customerName || 'cliente';
+    const clientName = rawName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    const now = new Date();
+    const timestamp = `${now.getHours()}${now.getMinutes().toString().padStart(2, '0')}_${now.getDate().toString().padStart(2, '0')}${now.getMonth() + 1}${now.getFullYear()}`;
+
+    const updatedItems = JSON.parse(JSON.stringify(items));
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const formData = new FormData();
+      formData.append('sizeId', item.size.id);
+
+      const rawPhotos = item.photos || [];
+      for (const photo of rawPhotos) {
+        if (photo.file) {
+          formData.append('photos', photo.file);
+          const seqStr = globalSequence.toString().padStart(3, '0');
+          const customName = `${clientName}_${timestamp}_${seqStr}.jpg`;
+          formData.append('customNames', customName);
+          globalSequence++;
+        }
+      }
+
+      if (formData.has('photos')) {
+        const response = await fetch('/api/upload-photos', { method: 'POST', body: formData });
+        if (response.ok) {
+          const result = await response.json();
+          if (result.files) {
+            updatedItems[i].photos = updatedItems[i].photos.map((p: any) => {
+              const serverFile = result.files.find((f: any) => f.name === p.name);
+              return { ...p, fileName: serverFile ? serverFile.fileName : p.name, file: undefined };
+            });
+          }
+        }
+      }
+    }
+    return updatedItems;
+  };
+
+  const createPendingOrder = async (updatedItems: any[]) => {
+    const finalOrder = {
+      client: { name: orderData.customerName, kiosk: orderData.kiosk },
+      items: updatedItems,
+      total: orderData.total,
+      paymentMethod: 'mercadopago',
+      status: 'pending_payment' // Initial status
+    };
+
+    const response = await fetch('/api/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(finalOrder)
+    });
+
+    if (!response.ok) throw new Error('Failed to create pending order');
+    return await response.json();
+  };
+
   const handleMercadoPagoPayment = async () => {
     setIsProcessing(true);
     try {
+      const isElectron = typeof window !== 'undefined' && (window as any).electron;
+
+      let currentOrderId = orderData.id;
+
+      // Mobile Flow: Persist data before redirect
+      if (!isElectron) {
+        console.log('[Mobile] Uploading photos and creating pending order...');
+        const updatedItems = await uploadPhotos(orderData.items);
+        const createdOrder = await createPendingOrder(updatedItems);
+        currentOrderId = createdOrder.orderId; // Use the DB ID
+        console.log('[Mobile] Pending order created:', currentOrderId);
+      }
+
       const response = await fetch('/api/mercadopago/create-preference', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          isElectron: !!isElectron, // Flag to determine URL strategy
+          external_reference: currentOrderId, // Attach ID
           items: orderData.items.map(item => ({
             id: item.size.id,
             title: `Impresión ${item.size.name} (${item.size.dimensions})`,
@@ -29,7 +135,7 @@ const Payment = ({ orderData, onPaymentSuccess, onBack }: PaymentProps) => {
             unit_price: item.subtotal / item.totalPhotos,
           })),
           metadata: {
-            orderId: orderData.id,
+            orderId: currentOrderId,
             customerName: orderData.customerName,
           }
         }),
@@ -41,8 +147,18 @@ const Payment = ({ orderData, onPaymentSuccess, onBack }: PaymentProps) => {
       const redirectUrl = data.sandbox_init_point || data.init_point;
 
       if (redirectUrl) {
-        console.log('Redirecting to Mercado Pago:', redirectUrl);
-        window.location.href = redirectUrl;
+        console.log('Opening Mercado Pago Modal:', redirectUrl);
+
+        // Use Electron Native Modal if available
+        if (typeof window !== 'undefined' && (window as any).electron && (window as any).electron.openPaymentModal) {
+          (window as any).electron.openPaymentModal(redirectUrl);
+        } else {
+          // Fallback for web / dev without electron
+          // Photos are already uploaded and order created. Redirecting...
+          console.warn('Electron API not found, falling back to window.location');
+          window.location.href = redirectUrl;
+        }
+
       } else {
         console.error('No init_point returned', data);
         setIsProcessing(false);
