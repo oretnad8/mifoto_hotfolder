@@ -197,9 +197,47 @@ async function getStore() {
 app.commandLine.appendSwitch('ignore-certificate-errors');
 
 app.whenReady().then(async () => {
-    // Initialize store
+    // 1. Inicializar Store
     await getStore();
 
+    // 2. Verificación Previa (Ping): Verificar si existe una licenseKey
+    const licenseKey = store.get('licenseKey');
+
+    if (licenseKey) {
+        // 3. Actualizar IP: Intentar notificar al servidor la nueva IP
+        try {
+            console.log('[Startup] License found. Attempting back-end IP sync...');
+            const hwid = machineIdSync();
+            const localIp = getLocalIpAddress();
+
+            // Timeout corto (3s) para no bloquear el arranque si no hay internet
+            const response = await axios.post(LICENSE_API_URL, {
+                licenseKey: licenseKey,
+                hwid: hwid,
+                localIp: localIp
+            }, { timeout: 3000 });
+
+            if (response.data && response.data.valid === true) {
+                console.log('[Startup] IP Sync successful.');
+
+                // Actualizar datos del store si el servidor devuelve nuevos valores
+                if (response.data.subdomain) store.set('subdomain', response.data.subdomain);
+                if (response.data.adminPassword) store.set('adminPassword', response.data.adminPassword);
+                if (response.data.mpAccessToken) store.set('mpAccessToken', response.data.mpAccessToken);
+                
+                // Actualizar configuración visual/extra
+                if (response.data.clientLogoUrl) store.set('clientLogoUrl', response.data.clientLogoUrl);
+                if (response.data.welcomeText) store.set('welcomeText', response.data.welcomeText);
+                if (response.data.validatorPassword) store.set('validatorPassword', response.data.validatorPassword);
+                if (response.data.themeColor) store.set('themeColor', response.data.themeColor);
+            }
+        } catch (err) {
+            // Si falla (timeout o error de red), solo logueamos y continuamos
+            console.warn('[Startup] IP Sync failed or timed out:', err.message);
+        }
+    }
+
+    // 4. Abrir Ventana
     // Bluetooth NO se inicia aquí. Se inicia bajo demanda.
     createWindow();
 
