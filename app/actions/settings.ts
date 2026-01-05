@@ -11,6 +11,7 @@ export async function saveValidationSettings(data: {
     clientLogoUrl?: string;
     welcomeText?: string;
     validatorPassword?: string;
+    brandingThemeColor?: string;
 }) {
     console.log(">>>>>>>> [Settings Action] CALLED. Data received:", JSON.stringify(data, null, 2));
 
@@ -54,12 +55,14 @@ export async function saveValidationSettings(data: {
                 ...(brandingLogoPath !== undefined ? { brandingLogoPath } : {}),
                 brandingWelcomeText: data.welcomeText,
                 validatorPassword: data.validatorPassword,
+                brandingThemeColor: data.brandingThemeColor || "orange",
             },
             create: {
                 id: 1,
                 brandingLogoPath: brandingLogoPath,
                 brandingWelcomeText: data.welcomeText,
                 validatorPassword: data.validatorPassword,
+                brandingThemeColor: data.brandingThemeColor || "orange",
             },
         });
         console.log("[Settings Action] Database updated successfully.");
@@ -76,7 +79,8 @@ export async function getBrandingSettings() {
             where: { id: 1 },
             select: {
                 brandingLogoPath: true,
-                brandingWelcomeText: true
+                brandingWelcomeText: true,
+                brandingThemeColor: true
             }
         });
         return config;

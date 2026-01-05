@@ -59,7 +59,7 @@ const SizeSelection = ({ onSizeSelect, onBack }: SizeSelectionProps) => {
       <div className="flex justify-center items-center">
         <div className="relative group">
           <div
-            className={`border-4 border-white shadow-lg transition-all duration-500 ease-out relative overflow-hidden ${isSelected ? 'ring-4 ring-[#D75F1E] ring-offset-2 scale-105' : 'hover:scale-110'
+            className={`border-4 border-white shadow-lg transition-all duration-500 ease-out relative overflow-hidden ${isSelected ? 'ring-4 ring-brand-500 ring-offset-2 scale-105' : 'hover:scale-110'
               }`}
             style={{
               width: `${width}px`,
@@ -173,7 +173,7 @@ const SizeSelection = ({ onSizeSelect, onBack }: SizeSelectionProps) => {
                 <h3 className="text-lg font-bold text-[#2D3A52] mb-2">{size.name}</h3>
                 <p className="text-[#2D3A52]/70 mb-3">{size.dimensions}</p>
                 <div className="bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 inline-block shadow-sm">
-                  <span className="text-[#D75F1E] font-bold text-lg">${size.price}</span>
+                  <span className="text-brand-600 font-bold text-lg">${size.price}</span>
                 </div>
               </div>
             </div>

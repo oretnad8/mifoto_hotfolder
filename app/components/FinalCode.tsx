@@ -80,7 +80,7 @@ const FinalCode = ({ orderData, onNewOrder }: FinalCodeProps) => {
           </div>
 
           <div className="bg-white rounded-2xl p-8 mb-8 shadow-lg">
-            <div className="text-6xl font-bold text-[#D75F1E] mb-4 font-mono tracking-wider">
+            <div className="text-6xl font-bold text-brand-600 mb-4 font-mono tracking-wider">
               {orderData.orderNumber
                 ? String(orderData.orderNumber).padStart(6, '0')
                 : orderData.id.slice(0, 8)}
@@ -88,11 +88,11 @@ const FinalCode = ({ orderData, onNewOrder }: FinalCodeProps) => {
           </div>
 
           {/* Instrucciones importantes arriba */}
-          <div className={`${orderData.paymentMethod === 'mercadopago' ? 'bg-green-50 border-green-200' : 'bg-orange-50 border-[#D75F1E]/20'} border-2 rounded-2xl p-6`}>
+          <div className={`${orderData.paymentMethod === 'mercadopago' ? 'bg-green-50 border-green-200' : 'bg-brand-50 border-brand-500/20'} border-2 rounded-2xl p-6`}>
             <div className="flex items-start gap-3">
-              <i className={`${orderData.paymentMethod === 'mercadopago' ? 'ri-information-line text-green-600' : 'ri-store-2-line text-[#D75F1E]'} text-2xl mt-1`}></i>
+              <i className={`${orderData.paymentMethod === 'mercadopago' ? 'ri-information-line text-green-600' : 'ri-store-2-line text-brand-600'} text-2xl mt-1`}></i>
               <div className="text-left">
-                <h3 className={`${orderData.paymentMethod === 'mercadopago' ? 'text-green-800' : 'text-[#D75F1E]'} text-lg font-bold mb-3`}>
+                <h3 className={`${orderData.paymentMethod === 'mercadopago' ? 'text-green-800' : 'text-brand-600'} text-lg font-bold mb-3`}>
                   {orderData.paymentMethod === 'mercadopago' ? '¡Tu pedido está confirmado!' : '¡Pedido Creado Exitosamente!'}
                 </h3>
                 <ul className={`space-y-2 text-sm ${orderData.paymentMethod === 'mercadopago' ? 'text-green-700' : 'text-[#2D3A52]/80'}`}>
@@ -259,7 +259,7 @@ const FinalCode = ({ orderData, onNewOrder }: FinalCodeProps) => {
         <div className="text-center">
           <button
             onClick={onNewOrder}
-            className="bg-[#D75F1E] text-white px-12 py-4 rounded-xl font-bold text-lg hover:bg-[#D75F1E]/90 transition-all duration-200 transform hover:scale-105 shadow-lg whitespace-nowrap"
+            className="bg-brand-500 text-white px-12 py-4 rounded-xl font-bold text-lg hover:bg-brand-600 transition-all duration-200 transform hover:scale-105 shadow-lg whitespace-nowrap"
           >
             <i className="ri-add-line mr-2"></i>
             Hacer Nuevo Pedido

@@ -53,8 +53,7 @@ const KioskUploadView = ({ selectedSize, onPhotosUploaded, onBack }: KioskUpload
     const handleStartUsb = async () => {
         setViewState('scanning_drives');
         try {
-            // @ts-ignore
-            const result = await window.electron.getRemovableDrives();
+            const result = await (window as any).electron.getRemovableDrives() as { success: boolean, drives: Drive[] };
             if (result.success && result.drives) {
                 setDrives(result.drives);
                 if (result.drives.length === 0) {
@@ -78,8 +77,7 @@ const KioskUploadView = ({ selectedSize, onPhotosUploaded, onBack }: KioskUpload
     const loadPath = async (path: string) => {
         setViewState('scanning_files');
         try {
-            // @ts-ignore
-            const result = await window.electron.scanDirectory(path);
+            const result = await (window as any).electron.scanDirectory(path) as { success: boolean, files: any[], folders: any[] };
             if (result.success) {
                 // Map files with STABLE ID (path) so selection persists
                 const scanned: Photo[] = (result.files || []).map((f: any) => ({
@@ -360,7 +358,7 @@ const KioskUploadView = ({ selectedSize, onPhotosUploaded, onBack }: KioskUpload
                                 onBack();
                             }
                         }}
-                        className="flex items-center gap-2 text-[#2D3A52] hover:text-[#D75F1E] transition-colors duration-200 whitespace-nowrap"
+                        className="flex items-center gap-2 text-[#2D3A52] hover:text-brand-600 transition-colors duration-200 whitespace-nowrap"
                     >
                         <i className="ri-arrow-left-line text-xl"></i>
                         <span className="text-lg font-medium">
@@ -397,20 +395,20 @@ const KioskUploadView = ({ selectedSize, onPhotosUploaded, onBack }: KioskUpload
                         <div className="grid grid-cols-2 gap-8 max-w-4xl mx-auto w-full mt-12">
                             <button
                                 onClick={handleStartUsb}
-                                className="flex flex-col items-center justify-center p-12 bg-[#F0F7FA] border-3 border-[#CEDFE7] hover:border-[#D75F1E] rounded-3xl transition-all group hover:bg-[#D75F1E]/5"
+                                className="flex flex-col items-center justify-center p-12 bg-[#F0F7FA] border-3 border-[#CEDFE7] hover:border-brand-500 rounded-3xl transition-all group hover:bg-brand-500/5"
                             >
                                 <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform">
-                                    <i className="ri-usb-line text-5xl text-[#D75F1E]"></i>
+                                    <i className="ri-usb-line text-5xl text-brand-600"></i>
                                 </div>
                                 <span className="text-2xl font-bold text-[#2D3A52]">USB / Memoria</span>
                             </button>
 
                             <button
                                 onClick={() => setViewState('bluetooth')}
-                                className="flex flex-col items-center justify-center p-12 bg-[#F0F7FA] border-3 border-[#CEDFE7] hover:border-[#D75F1E] rounded-3xl transition-all group hover:bg-[#D75F1E]/5"
+                                className="flex flex-col items-center justify-center p-12 bg-[#F0F7FA] border-3 border-[#CEDFE7] hover:border-brand-500 rounded-3xl transition-all group hover:bg-brand-500/5"
                             >
                                 <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform">
-                                    <i className="ri-bluetooth-line text-5xl text-[#D75F1E]"></i>
+                                    <i className="ri-bluetooth-line text-5xl text-brand-600"></i>
                                 </div>
                                 <span className="text-2xl font-bold text-[#2D3A52]">Bluetooth</span>
                             </button>
@@ -420,7 +418,7 @@ const KioskUploadView = ({ selectedSize, onPhotosUploaded, onBack }: KioskUpload
                     {/* View: LOADING */}
                     {(viewState === 'scanning_drives' || viewState === 'scanning_files') && (
                         <div className="flex-1 flex flex-col items-center justify-center">
-                            <div className="w-20 h-20 border-4 border-[#D75F1E] border-t-transparent rounded-full animate-spin mb-8"></div>
+                            <div className="w-20 h-20 border-4 border-brand-500 border-t-transparent rounded-full animate-spin mb-8"></div>
                             <h3 className="text-2xl font-bold text-[#2D3A52]">
                                 {viewState === 'scanning_drives' ? 'Buscando dispositivos...' : 'Leyendo contenido...'}
                             </h3>
@@ -436,8 +434,8 @@ const KioskUploadView = ({ selectedSize, onPhotosUploaded, onBack }: KioskUpload
                                     onClick={() => handleDriveSelect(drive)}
                                     className="flex items-center gap-6 p-6 bg-white border-2 border-[#CEDFE7] hover:border-[#D75F1E] rounded-2xl shadow-sm hover:shadow-md transition-all text-left group"
                                 >
-                                    <div className="w-16 h-16 bg-[#F0F7FA] rounded-xl flex items-center justify-center group-hover:bg-[#D75F1E]/10 transition-colors">
-                                        <i className="ri-hard-drive-2-line text-3xl text-[#2D3A52] group-hover:text-[#D75F1E]"></i>
+                                    <div className="w-16 h-16 bg-[#F0F7FA] rounded-xl flex items-center justify-center group-hover:bg-brand-500/10 transition-colors">
+                                        <i className="ri-hard-drive-2-line text-3xl text-[#2D3A52] group-hover:text-brand-600"></i>
                                     </div>
                                     <div>
                                         <h3 className="text-lg font-bold text-[#2D3A52]">{drive.label || 'Sin Nombre'}</h3>
@@ -458,7 +456,7 @@ const KioskUploadView = ({ selectedSize, onPhotosUploaded, onBack }: KioskUpload
                                         <i className="ri-checkbox-multiple-line"></i> Seleccionar Vista
                                     </button>
                                     <div className="w-px h-4 bg-[#CEDFE7]"></div>
-                                    <button onClick={deselectAll} className="text-sm font-medium text-[#2D3A52] hover:text-[#D75F1E] flex items-center gap-1">
+                                    <button onClick={deselectAll} className="text-sm font-medium text-[#2D3A52] hover:text-brand-600 flex items-center gap-1">
                                         <i className="ri-checkbox-blank-line"></i> Limpiar Todo
                                     </button>
                                 </div>
@@ -473,7 +471,7 @@ const KioskUploadView = ({ selectedSize, onPhotosUploaded, onBack }: KioskUpload
                                         className={`
                                     px-6 py-2 rounded-lg font-bold shadow-md transition-all flex items-center gap-2
                                     ${selectedPhotosMap.size > 0
-                                                ? 'bg-[#D75F1E] text-white hover:bg-[#D75F1E]/90 hover:scale-105'
+                                                ? 'bg-brand-500 text-white hover:bg-brand-600 hover:scale-105'
                                                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'}
                                 `}
                                     >
@@ -493,7 +491,7 @@ const KioskUploadView = ({ selectedSize, onPhotosUploaded, onBack }: KioskUpload
                                                 <button
                                                     key={idx}
                                                     onClick={() => handleEnterFolder(folder.path)}
-                                                    className="flex flex-col items-center p-4 bg-white border border-[#CEDFE7] hover:border-[#D75F1E] rounded-xl hover:shadow-md transition-all group"
+                                                    className="flex flex-col items-center p-4 bg-white border border-[#CEDFE7] hover:border-brand-500 rounded-xl hover:shadow-md transition-all group"
                                                 >
                                                     <i className="ri-folder-3-fill text-4xl text-[#FFB020] group-hover:text-[#FFC040] mb-2"></i>
                                                     <span className="text-sm font-medium text-[#2D3A52] text-center break-all line-clamp-2 leading-tight">
@@ -575,7 +573,7 @@ const KioskUploadView = ({ selectedSize, onPhotosUploaded, onBack }: KioskUpload
                 {isProcessing && (
                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
                         <div className="bg-white rounded-2xl p-8 text-center">
-                            <div className="w-16 h-16 bg-[#D75F1E] rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+                            <div className="w-16 h-16 bg-brand-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
                                 <i className="ri-loader-4-line text-white text-3xl animate-spin"></i>
                             </div>
                             <p className="text-lg font-medium text-[#2D3A52]">Procesando...</p>

@@ -197,7 +197,7 @@ const Payment = ({ orderData, onPaymentSuccess, onBack }: PaymentProps) => {
         <div className="flex items-center justify-between mb-8">
           <button
             onClick={onBack}
-            className="flex items-center gap-2 text-[#2D3A52] hover:text-[#D75F1E] transition-colors duration-200 whitespace-nowrap"
+            className="flex items-center gap-2 text-[#2D3A52] hover:text-brand-600 transition-colors duration-200 whitespace-nowrap"
             disabled={isProcessing}
           >
             <i className="ri-arrow-left-line text-xl"></i>
@@ -222,14 +222,14 @@ const Payment = ({ orderData, onPaymentSuccess, onBack }: PaymentProps) => {
               <div className="space-y-4 mb-8">
                 <div
                   className={`p-4 rounded-xl cursor-pointer transition-all duration-200 ${paymentMethod === 'cash'
-                    ? 'bg-white ring-4 ring-[#D75F1E] shadow-lg'
+                    ? 'bg-white ring-4 ring-brand-500 shadow-lg'
                     : 'bg-white/80 hover:bg-white hover:shadow-md'
                     }`}
                   onClick={() => setPaymentMethod('cash')}
                 >
                   <div className="flex items-center gap-4">
                     <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'cash'
-                      ? 'border-[#D75F1E] bg-[#D75F1E]'
+                      ? 'border-brand-500 bg-brand-500'
                       : 'border-gray-300'
                       }`}>
                       {paymentMethod === 'cash' && (
@@ -248,14 +248,14 @@ const Payment = ({ orderData, onPaymentSuccess, onBack }: PaymentProps) => {
 
                 <div
                   className={`p-4 rounded-xl cursor-pointer transition-all duration-200 ${paymentMethod === 'mercadopago'
-                    ? 'bg-white ring-4 ring-[#D75F1E] shadow-lg'
+                    ? 'bg-white ring-4 ring-brand-500 shadow-lg'
                     : 'bg-white/80 hover:bg-white hover:shadow-md'
                     }`}
                   onClick={() => setPaymentMethod('mercadopago')}
                 >
                   <div className="flex items-center gap-4">
                     <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'mercadopago'
-                      ? 'border-[#D75F1E] bg-[#D75F1E]'
+                      ? 'border-brand-500 bg-brand-500'
                       : 'border-gray-300'
                       }`}>
                       {paymentMethod === 'mercadopago' && (
@@ -277,8 +277,8 @@ const Payment = ({ orderData, onPaymentSuccess, onBack }: PaymentProps) => {
               {paymentMethod === 'cash' && (
                 <div className="bg-white/60 rounded-xl p-6">
                   <div className="text-center mb-4">
-                    <div className="w-16 h-16 bg-[#D75F1E]/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <i className="ri-store-2-line text-[#D75F1E] text-2xl"></i>
+                    <div className="w-16 h-16 bg-brand-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <i className="ri-store-2-line text-brand-600 text-2xl"></i>
                     </div>
                     <h4 className="font-semibold text-[#2D3A52] mb-2">Instrucciones de Pago</h4>
                     <p className="text-sm text-[#2D3A52]/70">Sigue estos pasos para completar tu orden:</p>
@@ -286,7 +286,7 @@ const Payment = ({ orderData, onPaymentSuccess, onBack }: PaymentProps) => {
 
                   <div className="space-y-4 text-sm mt-6">
                     <div className="flex items-start gap-4">
-                      <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shrink-0 border border-gray-200 font-bold text-[#D75F1E]">
+                      <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shrink-0 border border-gray-200 font-bold text-brand-600">
                         1
                       </div>
                       <p className="text-[#2D3A52] pt-1">
@@ -294,7 +294,7 @@ const Payment = ({ orderData, onPaymentSuccess, onBack }: PaymentProps) => {
                       </p>
                     </div>
                     <div className="flex items-start gap-4">
-                      <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shrink-0 border border-gray-200 font-bold text-[#D75F1E]">
+                      <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shrink-0 border border-gray-200 font-bold text-brand-600">
                         2
                       </div>
                       <p className="text-[#2D3A52] pt-1">
@@ -302,7 +302,7 @@ const Payment = ({ orderData, onPaymentSuccess, onBack }: PaymentProps) => {
                       </p>
                     </div>
                     <div className="flex items-start gap-4">
-                      <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shrink-0 border border-gray-200 font-bold text-[#D75F1E]">
+                      <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shrink-0 border border-gray-200 font-bold text-brand-600">
                         3
                       </div>
                       <p className="text-[#2D3A52] pt-1">
@@ -318,7 +318,7 @@ const Payment = ({ orderData, onPaymentSuccess, onBack }: PaymentProps) => {
                 <button
                   onClick={handlePayment}
                   disabled={isProcessing}
-                  className="w-full bg-[#D75F1E] text-white py-4 rounded-xl font-bold text-lg hover:bg-[#D75F1E]/90 transition-all duration-200 transform hover:scale-105 shadow-lg whitespace-nowrap disabled:opacity-50 disabled:transform-none"
+                  className="w-full bg-brand-500 text-white py-4 rounded-xl font-bold text-lg hover:bg-brand-600 transition-all duration-200 transform hover:scale-105 shadow-lg whitespace-nowrap disabled:opacity-50 disabled:transform-none"
                 >
                   {isProcessing ? (
                     <>
@@ -359,7 +359,7 @@ const Payment = ({ orderData, onPaymentSuccess, onBack }: PaymentProps) => {
                           {item.totalPhotos} impresiones • {item.size.dimensions}
                         </p>
                       </div>
-                      <span className="font-bold text-[#D75F1E]">${item.subtotal.toFixed(0)}</span>
+                      <span className="font-bold text-brand-600">${item.subtotal.toFixed(0)}</span>
                     </div>
                   </div>
                 ))}
@@ -373,7 +373,7 @@ const Payment = ({ orderData, onPaymentSuccess, onBack }: PaymentProps) => {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-lg font-semibold text-[#2D3A52]">Total:</span>
-                  <span className="text-2xl font-bold text-[#D75F1E]">${orderData.total.toFixed(0)}</span>
+                  <span className="text-2xl font-bold text-brand-500">${orderData.total.toFixed(0)}</span>
                 </div>
               </div>
 
@@ -395,7 +395,7 @@ const Payment = ({ orderData, onPaymentSuccess, onBack }: PaymentProps) => {
         {isProcessing && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-white rounded-2xl p-8 text-center max-w-md mx-4">
-              <div className="w-16 h-16 bg-[#D75F1E] rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
+              <div className="w-16 h-16 bg-brand-500 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
                 <i className="ri-loader-4-line text-white text-2xl animate-spin"></i>
               </div>
               <h3 className="text-xl font-bold text-[#2D3A52] mb-4">Procesando Pago</h3>
@@ -403,7 +403,7 @@ const Payment = ({ orderData, onPaymentSuccess, onBack }: PaymentProps) => {
                 Por favor espera mientras validamos tu pago...
               </p>
               <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-[#D75F1E] h-2 rounded-full animate-pulse" style={{ width: '75%' }}></div>
+                <div className="bg-brand-500 h-2 rounded-full animate-pulse" style={{ width: '75%' }}></div>
               </div>
             </div>
           </div>

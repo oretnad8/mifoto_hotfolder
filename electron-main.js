@@ -419,7 +419,8 @@ ipcMain.handle('get-activation-status', async () => {
                 extraConfig = {
                     clientLogoUrl: response.data.clientLogoUrl,
                     welcomeText: response.data.welcomeText,
-                    validatorPassword: response.data.validatorPassword
+                    validatorPassword: response.data.validatorPassword,
+                    themeColor: response.data.themeColor
                 };
 
             } else {
@@ -476,7 +477,8 @@ ipcMain.handle('activate-app', async (event, { licenseKey }) => {
                 success: true,
                 clientLogoUrl: response.data.clientLogoUrl,
                 welcomeText: response.data.welcomeText,
-                validatorPassword: response.data.validatorPassword
+                validatorPassword: response.data.validatorPassword,
+                themeColor: response.data.themeColor
             };
         } else {
             console.warn('[Activation] Server rejected license or missing adminPassword.');

@@ -154,7 +154,7 @@ const Cart = ({ items = [], selectedSize, photos = [], onConfirm, onBack, onAddM
           <p className="text-[#2D3A52]/70 mb-8">No tienes productos en tu carrito</p>
           <button
             onClick={onAddMore}
-            className="bg-[#D75F1E] text-white px-8 py-3 rounded-xl font-bold hover:bg-[#D75F1E]/90 transition-colors duration-200 whitespace-nowrap"
+            className="bg-brand-500 text-white px-8 py-3 rounded-xl font-bold hover:bg-brand-600 transition-colors duration-200 whitespace-nowrap"
           >
             Añadir Productos
           </button>
@@ -170,7 +170,7 @@ const Cart = ({ items = [], selectedSize, photos = [], onConfirm, onBack, onAddM
         <div className="flex items-center justify-between mb-8">
           <button
             onClick={onBack}
-            className="flex items-center gap-2 text-[#2D3A52] hover:text-[#D75F1E] transition-colors duration-200 whitespace-nowrap"
+            className="flex items-center gap-2 text-[#2D3A52] hover:text-brand-600 transition-colors duration-200 whitespace-nowrap"
           >
             <i className="ri-arrow-left-line text-xl"></i>
             <span className="text-lg font-medium">Volver</span>
@@ -193,14 +193,14 @@ const Cart = ({ items = [], selectedSize, photos = [], onConfirm, onBack, onAddM
                   <div>
                     <h3 className="text-xl font-bold text-[#2D3A52]">
                       Producto #{index + 1} - {item.size.name}
-                      {requiresEven(item.size) && <span className="ml-2 text-sm text-[#D75F1E] font-normal">(Pack Par)</span>}
+                      {requiresEven(item.size) && <span className="ml-2 text-sm text-brand-600 font-normal">(Pack Par)</span>}
                     </h3>
                     <p className="text-[#2D3A52]/70">
                       {item.size.dimensions} • ${item.size.price} {requiresEven(item.size) ? '(par)' : '(u)'}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-2xl font-bold text-[#D75F1E]">${item.subtotal.toFixed(0)}</p>
+                    <p className="text-2xl font-bold text-brand-500">${item.subtotal.toFixed(0)}</p>
                     <button
                       onClick={() => removeItem(item.id)}
                       className="text-red-500 hover:text-red-700 text-sm mt-2 underline cursor-pointer"
@@ -235,7 +235,7 @@ const Cart = ({ items = [], selectedSize, photos = [], onConfirm, onBack, onAddM
 
             <button
               onClick={onAddMore}
-              className="w-full bg-white border-2 border-[#D75F1E] text-[#D75F1E] py-4 rounded-xl font-bold text-lg hover:bg-[#D75F1E] hover:text-white transition-all duration-200"
+              className="w-full bg-white border-2 border-brand-500 text-brand-500 py-4 rounded-xl font-bold text-lg hover:bg-brand-500 hover:text-white transition-all duration-200"
             >
               <i className="ri-add-line mr-2"></i>
               Añadir Más Tamaños
@@ -254,14 +254,14 @@ const Cart = ({ items = [], selectedSize, photos = [], onConfirm, onBack, onAddM
                 </div>
                 <div className="flex justify-between items-center py-3">
                   <span className="text-lg font-semibold text-[#2D3A52]">Total:</span>
-                  <span className="text-2xl font-bold text-[#D75F1E]">${getTotalAmount().toFixed(0)}</span>
+                  <span className="text-2xl font-bold text-brand-500">${getTotalAmount().toFixed(0)}</span>
                 </div>
               </div>
 
               <button
                 onClick={handleFinalize}
                 disabled={cartItems.length === 0}
-                className="w-full bg-[#D75F1E] text-white py-4 rounded-xl font-bold text-lg hover:bg-[#D75F1E]/90 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-brand-500 text-white py-4 rounded-xl font-bold text-lg hover:bg-brand-600 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Confirmar Pedido
                 <i className="ri-arrow-right-line ml-2"></i>

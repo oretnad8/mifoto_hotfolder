@@ -229,7 +229,7 @@ const PhotoUpload = ({ selectedSize, onPhotosUploaded, onBack }: PhotoUploadProp
         <div className="flex items-center justify-between mb-8">
           <button
             onClick={onBack}
-            className="flex items-center gap-2 text-[#2D3A52] hover:text-[#D75F1E] transition-colors duration-200 whitespace-nowrap"
+            className="flex items-center gap-2 text-[#2D3A52] hover:text-brand-600 transition-colors duration-200 whitespace-nowrap"
           >
             <i className="ri-arrow-left-line text-xl"></i>
             <span className="text-base sm:text-lg font-medium">Volver</span>
@@ -248,8 +248,8 @@ const PhotoUpload = ({ selectedSize, onPhotosUploaded, onBack }: PhotoUploadProp
           <div className="lg:col-span-2">
             <div
               className={`border-3 border-dashed rounded-2xl p-12 text-center transition-all duration-300 cursor-pointer ${dragActive
-                ? 'border-[#D75F1E] bg-[#D75F1E]/5'
-                : 'border-[#CEDFE7] hover:border-[#D75F1E] hover:bg-[#FCF4F3]'
+                ? 'border-brand-500 bg-brand-500/5'
+                : 'border-[#CEDFE7] hover:border-brand-500 hover:bg-[#FCF4F3]'
                 }`}
               onDragEnter={handleDrag}
               onDragLeave={handleDrag}
@@ -258,7 +258,7 @@ const PhotoUpload = ({ selectedSize, onPhotosUploaded, onBack }: PhotoUploadProp
               onClick={() => fileInputRef.current?.click()}
             >
               <div className="w-24 h-24 bg-[#CEDFE7] rounded-full flex items-center justify-center mx-auto mb-6">
-                <i className={`ri-upload-cloud-fill text-4xl ${dragActive ? 'text-[#D75F1E]' : 'text-[#2D3A52]'}`}></i>
+                <i className={`ri-upload-cloud-fill text-4xl ${dragActive ? 'text-brand-500' : 'text-[#2D3A52]'}`}></i>
               </div>
 
               <h3 className="text-2xl font-bold text-[#2D3A52] mb-4">
@@ -266,7 +266,7 @@ const PhotoUpload = ({ selectedSize, onPhotosUploaded, onBack }: PhotoUploadProp
               </h3>
 
               <p className="text-[#2D3A52]/70 mb-6">
-                o <span className="text-[#D75F1E] font-semibold">haz clic para seleccionar</span>
+                o <span className="text-brand-600 font-semibold">haz clic para seleccionar</span>
               </p>
 
               <div className="text-sm text-[#2D3A52]/60">
@@ -311,7 +311,7 @@ const PhotoUpload = ({ selectedSize, onPhotosUploaded, onBack }: PhotoUploadProp
                 <div className="bg-white/80 rounded-lg p-3">
                   <p className="font-medium text-[#2D3A52]">{selectedSize?.name}</p>
                   <p className="text-sm text-[#2D3A52]/70">{selectedSize?.dimensions}</p>
-                  <p className="text-lg font-bold text-[#D75F1E]">${selectedSize?.price} c/u</p>
+                  <p className="text-lg font-bold text-brand-600">${selectedSize?.price} c/u</p>
                 </div>
               </div>
 
@@ -319,7 +319,7 @@ const PhotoUpload = ({ selectedSize, onPhotosUploaded, onBack }: PhotoUploadProp
               <div className="mb-6">
                 <h4 className="font-semibold text-[#2D3A52] mb-2">Total de Impresiones</h4>
                 <div className="bg-white/80 rounded-lg p-3 text-center">
-                  <p className="text-3xl font-bold text-[#D75F1E]">{totalPhotos}</p>
+                  <p className="text-3xl font-bold text-brand-500">{totalPhotos}</p>
                   <p className="text-sm text-[#2D3A52]/70">impresiones</p>
                 </div>
               </div>
@@ -343,7 +343,7 @@ const PhotoUpload = ({ selectedSize, onPhotosUploaded, onBack }: PhotoUploadProp
               {photos.length > 0 && (
                 <button
                   onClick={handleContinue}
-                  className="w-full bg-[#D75F1E] text-white py-4 rounded-xl font-bold text-lg hover:bg-[#D75F1E]/90 transition-all duration-200 transform hover:scale-105 shadow-lg whitespace-nowrap"
+                  className="w-full bg-brand-500 text-white py-4 rounded-xl font-bold text-lg hover:bg-brand-600 transition-all duration-200 transform hover:scale-105 shadow-lg whitespace-nowrap"
                 >
                   Continuar al Resumen
                   <i className="ri-arrow-right-line ml-2"></i>
@@ -356,7 +356,7 @@ const PhotoUpload = ({ selectedSize, onPhotosUploaded, onBack }: PhotoUploadProp
         {isProcessing && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-white rounded-2xl p-8 text-center">
-              <div className="w-16 h-16 bg-[#D75F1E] rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+              <div className="w-16 h-16 bg-brand-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
                 <i className="ri-upload-line text-white text-2xl"></i>
               </div>
               <p className="text-lg font-medium text-[#2D3A52]">Procesando fotos...</p>

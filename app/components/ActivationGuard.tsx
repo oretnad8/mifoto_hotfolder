@@ -23,7 +23,8 @@ export default function ActivationGuard({
                         saveValidationSettings({
                             clientLogoUrl: res.clientLogoUrl,
                             welcomeText: res.welcomeText,
-                            validatorPassword: res.validatorPassword
+                            validatorPassword: res.validatorPassword,
+                            brandingThemeColor: res.themeColor
                         }).catch(console.error);
 
                         setStatus("active");

@@ -78,7 +78,7 @@ const Confirmation = ({ cartItems, onConfirm, onBack }: ConfirmationProps) => {
         <div className="flex items-center justify-between mb-8">
           <button
             onClick={onBack}
-            className="flex items-center gap-2 text-[#2D3A52] hover:text-[#D75F1E] transition-colors duration-200 whitespace-nowrap"
+            className="flex items-center gap-2 text-[#2D3A52] hover:text-brand-600 transition-colors duration-200 whitespace-nowrap"
           >
             <i className="ri-arrow-left-line text-xl"></i>
             <span className="text-lg font-medium">Volver</span>
@@ -101,7 +101,7 @@ const Confirmation = ({ cartItems, onConfirm, onBack }: ConfirmationProps) => {
 
               <div className="p-4 bg-white rounded-xl">
                 <div className="flex items-start gap-4">
-                  <div className="w-6 h-6 bg-[#D75F1E] rounded-full flex items-center justify-center mt-1">
+                  <div className="w-6 h-6 bg-brand-500 rounded-full flex items-center justify-center mt-1">
                     <i className="ri-check-line text-white text-sm"></i>
                   </div>
 
@@ -131,7 +131,7 @@ const Confirmation = ({ cartItems, onConfirm, onBack }: ConfirmationProps) => {
                   placeholder="Ingresa tu nombre completo"
                   className={`w-full px-4 py-3 bg-white rounded-xl border-2 transition-colors duration-200 text-sm ${errors.name
                     ? 'border-red-300 focus:border-red-500'
-                    : 'border-transparent focus:border-[#D75F1E]'
+                    : 'border-transparent focus:border-brand-500'
                     } focus:outline-none`}
                 />
                 {errors.name && (
@@ -155,7 +155,7 @@ const Confirmation = ({ cartItems, onConfirm, onBack }: ConfirmationProps) => {
                   <div key={item.id} className="bg-white/80 rounded-lg p-4">
                     <div className="flex justify-between items-start mb-2">
                       <h4 className="font-semibold text-[#2D3A52] text-sm">{item.size.name}</h4>
-                      <span className="font-bold text-[#D75F1E]">${item.subtotal.toFixed(0)}</span>
+                      <span className="font-bold text-brand-600">${item.subtotal.toFixed(0)}</span>
                     </div>
                     <p className="text-xs text-[#2D3A52]/70">
                       {item.totalPhotos} impresiones • {item.size.dimensions}
@@ -172,14 +172,14 @@ const Confirmation = ({ cartItems, onConfirm, onBack }: ConfirmationProps) => {
                 </div>
                 <div className="flex justify-between items-center mb-4">
                   <span className="text-lg font-semibold text-[#2D3A52]">Total a Pagar:</span>
-                  <span className="text-2xl font-bold text-[#D75F1E]">${getTotalAmount().toFixed(0)}</span>
+                  <span className="text-2xl font-bold text-brand-500">${getTotalAmount().toFixed(0)}</span>
                 </div>
               </div>
 
               {/* Botón proceder al pago */}
               <button
                 onClick={handleConfirm}
-                className="w-full bg-[#D75F1E] text-white py-4 rounded-xl font-bold text-lg hover:bg-[#D75F1E]/90 transition-all duration-200 transform hover:scale-105 shadow-lg whitespace-nowrap"
+                className="w-full bg-brand-500 text-white py-4 rounded-xl font-bold text-lg hover:bg-brand-600 transition-all duration-200 transform hover:scale-105 shadow-lg whitespace-nowrap"
               >
                 Proceder al Pago
                 <i className="ri-arrow-right-line ml-2"></i>
@@ -188,7 +188,7 @@ const Confirmation = ({ cartItems, onConfirm, onBack }: ConfirmationProps) => {
               {/* Información adicional */}
               <div className="mt-6 space-y-3">
                 <div className="flex items-start gap-2 text-sm">
-                  <i className="ri-time-line text-[#D75F1E] mt-0.5"></i>
+                  <i className="ri-time-line text-brand-600 mt-0.5"></i>
                   <div>
                     <p className="font-medium text-[#2D3A52]">Tiempo de preparación</p>
                     <p className="text-[#2D3A52]/70 text-xs">5-10 minutos tras el pago</p>
@@ -196,7 +196,7 @@ const Confirmation = ({ cartItems, onConfirm, onBack }: ConfirmationProps) => {
                 </div>
 
                 <div className="flex items-start gap-2 text-sm">
-                  <i className="ri-shield-check-line text-[#D75F1E] mt-0.5"></i>
+                  <i className="ri-shield-check-line text-brand-600 mt-0.5"></i>
                   <div>
                     <p className="font-medium text-[#2D3A52]">Pago seguro</p>
                     <p className="text-[#2D3A52]/70 text-xs">Procesado de forma segura</p>

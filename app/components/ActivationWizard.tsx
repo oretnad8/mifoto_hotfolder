@@ -20,7 +20,8 @@ export default function ActivationWizard() {
                     await saveValidationSettings({
                         clientLogoUrl: status.clientLogoUrl,
                         welcomeText: status.welcomeText,
-                        validatorPassword: status.validatorPassword
+                        validatorPassword: status.validatorPassword,
+                        brandingThemeColor: status.themeColor
                     });
                 }
             });
@@ -47,7 +48,8 @@ export default function ActivationWizard() {
                 await saveValidationSettings({
                     clientLogoUrl: result.clientLogoUrl,
                     welcomeText: result.welcomeText,
-                    validatorPassword: result.validatorPassword
+                    validatorPassword: result.validatorPassword,
+                    brandingThemeColor: result.themeColor
                 });
 
                 // Success! Reload or notify parent.

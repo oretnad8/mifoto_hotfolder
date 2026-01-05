@@ -96,7 +96,7 @@ const CategoryScreen = ({ onCategorySelect }: CategoryScreenProps) => {
           >
             <div className="p-6 sm:p-8 h-full flex flex-col items-center justify-center text-center relative">
               {/* Icono */}
-              <div className={`w-16 sm:w-20 h-16 sm:h-20 rounded-full flex items-center justify-center mb-4 sm:mb-6 transition-all duration-300 bg-[#D75F1E] text-white ${hoveredCard ? 'scale-110 shadow-xl' : ''
+              <div className={`w-16 sm:w-20 h-16 sm:h-20 rounded-full flex items-center justify-center mb-4 sm:mb-6 transition-all duration-300 bg-brand-500 text-white ${hoveredCard ? 'scale-110 shadow-xl' : ''
                 }`}>
                 <i className="ri-camera-fill text-2xl sm:text-4xl"></i>
               </div>
@@ -114,7 +114,7 @@ const CategoryScreen = ({ onCategorySelect }: CategoryScreenProps) => {
               {/* Call to action */}
               <div className={`bg-white/80 rounded-2xl px-4 sm:px-6 py-2 sm:py-3 transition-all duration-300 ${hoveredCard ? 'bg-white shadow-lg' : ''
                 }`}>
-                <p className="text-[#D75F1E] font-bold text-base sm:text-lg">
+                <p className="text-brand-600 font-bold text-base sm:text-lg">
                   Toca para comenzar
                 </p>
               </div>
@@ -148,21 +148,21 @@ const CategoryScreen = ({ onCategorySelect }: CategoryScreenProps) => {
             <div className="bg-gradient-to-r from-[#CEDFE7] to-[#FCF4F3] rounded-2xl p-4 max-w-3xl mx-auto">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
                 <div>
-                  <div className="w-10 sm:w-12 h-10 sm:h-12 bg-[#D75F1E] rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3">
+                  <div className="w-10 sm:w-12 h-10 sm:h-12 bg-brand-500 rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3">
                     <i className="ri-time-line text-white text-lg sm:text-xl"></i>
                   </div>
                   <h4 className="font-semibold text-[#2D3A52] mb-1 text-xs sm:text-sm">Rápido</h4>
                   <p className="text-[#2D3A52]/70 text-xs">Listo en 5 minutos</p>
                 </div>
                 <div>
-                  <div className="w-10 sm:w-12 h-10 sm:h-12 bg-[#D75F1E] rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3">
+                  <div className="w-10 sm:w-12 h-10 sm:h-12 bg-brand-500 rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3">
                     <i className="ri-star-line text-white text-lg sm:text-xl"></i>
                   </div>
                   <h4 className="font-semibold text-[#2D3A52] mb-1 text-xs sm:text-sm">Calidad</h4>
                   <p className="text-[#2D3A52]/70 text-xs">Papel fotográfico premium</p>
                 </div>
                 <div>
-                  <div className="w-10 sm:w-12 h-10 sm:h-12 bg-[#D75F1E] rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3">
+                  <div className="w-10 sm:w-12 h-10 sm:h-12 bg-brand-500 rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3">
                     <i className="ri-hand-coin-line text-white text-lg sm:text-xl"></i>
                   </div>
                   <h4 className="font-semibold text-[#2D3A52] mb-1 text-xs sm:text-sm">Precio</h4>
