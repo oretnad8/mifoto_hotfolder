@@ -67,9 +67,9 @@ export default function ActivationWizard() {
 
     return (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/95 backdrop-blur-sm">
-            <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-200">
+            <div className="w-full max-w-xl bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-200">
                 <div className="bg-blue-600 p-6 text-center">
-                    <h2 className="text-2xl font-bold text-white">Activación de Kiosco</h2>
+                    <h2 className="text-2xl font-bold text-white">Activación de Localfoto</h2>
                     <p className="text-blue-100 text-sm mt-1">Configuración Inicial</p>
                 </div>
 
