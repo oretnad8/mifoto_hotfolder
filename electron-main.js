@@ -373,7 +373,12 @@ ipcMain.handle('get-activation-status', async () => {
     const licenseKey = s.get('licenseKey');
     const hwid = machineIdSync();
 
-    let extraConfig = {};
+    let extraConfig = {
+        clientLogoUrl: s.get('clientLogoUrl'),
+        welcomeText: s.get('welcomeText'),
+        validatorPassword: s.get('validatorPassword'),
+        themeColor: s.get('themeColor')
+    };
 
     if (licenseKey) {
         // Attempt to sync with server to get latest password
@@ -415,13 +420,19 @@ ipcMain.handle('get-activation-status', async () => {
                     }
                 }
 
-                // Extra config for SQLite
+                // Update and Save Extra Config
                 extraConfig = {
                     clientLogoUrl: response.data.clientLogoUrl,
                     welcomeText: response.data.welcomeText,
                     validatorPassword: response.data.validatorPassword,
                     themeColor: response.data.themeColor
                 };
+
+                // Persist extra config to store for offline usage
+                if (extraConfig.clientLogoUrl !== undefined) s.set('clientLogoUrl', extraConfig.clientLogoUrl);
+                if (extraConfig.welcomeText !== undefined) s.set('welcomeText', extraConfig.welcomeText);
+                if (extraConfig.validatorPassword !== undefined) s.set('validatorPassword', extraConfig.validatorPassword);
+                if (extraConfig.themeColor !== undefined) s.set('themeColor', extraConfig.themeColor);
 
             } else {
                 console.warn('[License] Server reported invalid license during sync.');

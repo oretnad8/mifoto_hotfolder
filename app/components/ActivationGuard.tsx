@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import ActivationWizard from "./ActivationWizard";
 import { saveValidationSettings } from "@/app/actions/settings";
 
@@ -11,6 +12,8 @@ export default function ActivationGuard({
 }) {
     const [status, setStatus] = useState<"loading" | "active" | "inactive">("loading");
 
+    const router = useRouter();
+
     useEffect(() => {
         // Check if running in Electron
         if (typeof window !== "undefined" && window.electron) {
@@ -20,12 +23,18 @@ export default function ActivationGuard({
                     if (res.active) {
                         console.log(">>>>>>>> [ActivationGuard] App is active. Syncing settings. Data from Electron:", res);
                         // Sync settings in background
-                        saveValidationSettings({
-                            clientLogoUrl: res.clientLogoUrl,
-                            welcomeText: res.welcomeText,
-                            validatorPassword: res.validatorPassword,
-                            brandingThemeColor: res.themeColor
-                        }).catch(console.error);
+                        try {
+                            await saveValidationSettings({
+                                clientLogoUrl: res.clientLogoUrl,
+                                welcomeText: res.welcomeText,
+                                validatorPassword: res.validatorPassword,
+                                brandingThemeColor: res.themeColor
+                            });
+                            console.log("[ActivationGuard] Settings synced. Refreshing...");
+                            router.refresh(); // Refresh to apply new theme/settings
+                        } catch (err) {
+                            console.error("[ActivationGuard] Error syncing settings:", err);
+                        }
 
                         setStatus("active");
                     } else {
@@ -41,7 +50,7 @@ export default function ActivationGuard({
             console.log("Not in Electron environment, skipping activation check.");
             setStatus("active");
         }
-    }, []);
+    }, [router]);
 
     if (status === "loading") {
         // Splash screen while checking
