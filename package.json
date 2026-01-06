@@ -1,5 +1,5 @@
 {
-  "name": "mifoto-hotfolder",
+  "name": "localfoto-hotfolder",
   "version": "0.1.0",
   "private": true,
   "main": "electron-main.js",
@@ -8,10 +8,68 @@
     "build": "next build",
     "lint": "next lint",
     "start": "cross-env NODE_ENV=production node server.js",
-    "app:windows": "concurrently \"npm run dev\" \"wait-on tcp:443 && electron .\""
+    "app:windows": "concurrently \"npm run dev\" \"wait-on tcp:443 && electron .\"",
+    "build:win": "npx prisma generate && next build && electron-builder --win"
+  },
+  "build": {
+    "appId": "com.localfoto.hotfolder",
+    "productName": "LocalFotoHotfolder",
+    "directories": {
+      "output": "dist"
+    },
+    "asar": true,
+    "asarUnpack": [
+      "**/node_modules/sharp/**/*",
+      "**/node_modules/@prisma/engines/**/*",
+      "**/node_modules/@prisma/engines/**/*",
+      "**/node_modules/@prisma/client/**/*"
+    ],
+    "files": [
+      ".next/**/*",
+      "public/**/*",
+      "server.js",
+      "electron-main.js",
+      "preload.js",
+      "package.json",
+      "lib/**/*",
+      "resources/**/*",
+      "prisma/schema.prisma",
+      "node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "certs",
+        "to": "certs"
+      },
+      {
+        "from": "resources/bin-bluetooth",
+        "to": "bin-bluetooth"
+      },
+      {
+        "from": "prisma/kiosk.db",
+        "to": "prisma/kiosk.db"
+      },
+      {
+        "from": "lib/prisma-client/query_engine-windows.dll.node",
+        "to": "prisma/query_engine-windows.dll.node"
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "resources/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowElevation": true,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "LocalFoto Kiosk"
+    }
   },
   "dependencies": {
-    "@prisma/client": "^6.19.1",
+    "@prisma/client": "5.22.0",
     "@react-google-maps/api": "^2.19.3",
     "@types/fs-extra": "^11.0.4",
     "@types/qrcode.react": "^1.0.5",
@@ -24,7 +82,7 @@
     "mercadopago": "^2.11.0",
     "next": "^15.5.9",
     "node-machine-id": "^1.1.12",
-    "prisma": "^6.19.1",
+    "prisma": "5.22.0",
     "qrcode.react": "^4.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

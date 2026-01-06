@@ -255,10 +255,10 @@ export async function moveOrderFilesToHotFolder(orderId: string) {
         return;
     }
 
-    const items = order.items as unknown as any[]; // Force cast for JSON structure
+    const items = (typeof order.items === 'string' ? JSON.parse(order.items) : order.items) as any[];
 
     // Extract client name from JSON
-    const clientData = order.client as any;
+    const clientData = (typeof order.client === 'string' ? JSON.parse(order.client) : order.client) as any;
     const rawName = clientData?.name || 'cliente';
 
     const clientName = sanitizeFilename(rawName);

@@ -12,6 +12,8 @@ export async function saveValidationSettings(data: {
     welcomeText?: string;
     validatorPassword?: string;
     brandingThemeColor?: string;
+    subdomain?: string;
+    mpAccessToken?: string;
 }) {
     console.log(">>>>>>>> [Settings Action] CALLED. Data received:", JSON.stringify(data, null, 2));
 
@@ -27,14 +29,18 @@ export async function saveValidationSettings(data: {
             const buffer = Buffer.from(response.data);
 
             const fileName = path.basename(data.clientLogoUrl);
-            const publicAssetsDir = path.join(process.cwd(), "public", "assets", "branding");
+            // FIX: Use AppData for persistent storage to avoid permission issues and keep data between updates
+            // On Windows: process.env.APPDATA. On Linux/Mac: process.env.HOME
+            const appData = process.env.APPDATA || process.env.HOME || process.cwd();
+            const persistentDir = path.join(appData, "localfoto-hotfolder", "uploads");
 
-            await fs.mkdir(publicAssetsDir, { recursive: true });
+            await fs.mkdir(persistentDir, { recursive: true });
 
-            const localFilePath = path.join(publicAssetsDir, fileName);
+            const localFilePath = path.join(persistentDir, fileName);
             await fs.writeFile(localFilePath, buffer);
 
-            brandingLogoPath = `/assets/branding/${fileName}`;
+            // The server.js is configured to serve /uploads/ from this directory
+            brandingLogoPath = `/uploads/${fileName}`;
             console.log("[Settings Action] Logo saved to:", brandingLogoPath);
         } catch (error: any) {
             console.error("[Settings Action] Failed to download logo:", error.message);
@@ -56,6 +62,8 @@ export async function saveValidationSettings(data: {
                 brandingWelcomeText: data.welcomeText,
                 validatorPassword: data.validatorPassword,
                 brandingThemeColor: data.brandingThemeColor || "orange",
+                subdomain: data.subdomain,
+                mpAccessToken: data.mpAccessToken,
             },
             create: {
                 id: 1,
@@ -63,6 +71,8 @@ export async function saveValidationSettings(data: {
                 brandingWelcomeText: data.welcomeText,
                 validatorPassword: data.validatorPassword,
                 brandingThemeColor: data.brandingThemeColor || "orange",
+                subdomain: data.subdomain,
+                mpAccessToken: data.mpAccessToken,
             },
         });
         console.log("[Settings Action] Database updated successfully.");

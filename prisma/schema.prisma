@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  output   = "../lib/prisma-client"
 }
 
 datasource db {
@@ -9,13 +10,13 @@ datasource db {
 
 model Order {
   id              String   @id @default(uuid())
-  client          Json
+  client          String // Stored as JSON string
   paymentMethod   String   @map("payment_method")
   status          String   @default("pending") // pending, paid, validated
   paymentReference String?  @map("payment_reference")
   orderNumber     Int?     @map("order_number")
   total           Float
-  items           Json
+  items           String // Stored as JSON string
   filesCopied     Boolean  @default(false) @map("files_copied")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
@@ -30,6 +31,8 @@ model KioskConfig {
   brandingWelcomeText String?  @map("branding_welcome_text")
   brandingThemeColor  String   @default("orange") @map("branding_theme_color")
   validatorPassword   String?  @map("validator_password")
+  subdomain           String?
+  mpAccessToken       String?  @map("mp_access_token")
   updatedAt           DateTime @updatedAt @map("updated_at")
 
   @@map("kiosk_config")

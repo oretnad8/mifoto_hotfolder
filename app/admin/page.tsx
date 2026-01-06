@@ -7,14 +7,12 @@ import AdminDashboard from './AdminDashboard';
 
 export const dynamic = 'force-dynamic';
 
-// @ts-ignore
 export default async function AdminPage({
     searchParams,
 }: {
-    searchParams?: { page?: string };
+    searchParams: Promise<{ page?: string }>;
 }) {
     // Resolve searchParams (it can be a Promise in newer Next.js versions)
-    // @ts-ignore
     const params = await searchParams;
 
     const page = Number(params?.page) || 1;

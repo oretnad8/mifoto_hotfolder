@@ -15,8 +15,8 @@ export async function POST(request: Request) {
 
         // Determine path to config.json
         // On Windows: %APPDATA%\mifoto-hotfolder\config.json
-        // We assume the app name is 'mifoto-hotfolder' based on package.json
-        const appName = 'mifoto-hotfolder';
+        // We assume the app name is 'localfoto-hotfolder' based on package.json
+        const appName = 'localfoto-hotfolder';
         let configPath = '';
 
         if (process.platform === 'win32') {

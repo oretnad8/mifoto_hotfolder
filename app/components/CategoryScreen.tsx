@@ -30,29 +30,31 @@ const CategoryScreen = ({ onCategorySelect }: CategoryScreenProps) => {
     const setDynamicUrl = async () => {
       // @ts-ignore
       const isElectron = typeof window !== 'undefined' && window.electron;
+      if (!isElectron) return;
 
-      if (!isElectron) {
-        return;
-      }
-
-      // 1. If loaded from a remote domain (subdomain), use that.
-      if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-        setQrUrl(window.location.origin);
-        return;
-      }
-
-      // 2. Fallback: If on localhost (dev or offline), use LAN IP with HTTPS 443
-      // @ts-ignore
-      if (typeof window !== 'undefined' && window.electron && window.electron.getLocalIp) {
-        try {
-          // @ts-ignore
-          const ip = await window.electron.getLocalIp();
-          if (ip) {
-            setQrUrl(`https://${ip}`);
-          }
-        } catch (error) {
-          console.error("Failed to get local IP", error);
+      try {
+        // 1. Try to get configured subdomain from Electron store (Priority)
+        // @ts-ignore
+        const status = await window.electron.getActivationStatus() as any;
+        if (status && status.subdomain) {
+          setQrUrl(`https://${status.subdomain}.localfoto.cl`);
+          return;
         }
+
+        // 2. If loaded from a remote domain (production web), use that.
+        if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+          setQrUrl(window.location.origin);
+          return;
+        }
+
+        // 3. Fallback: LAN IP
+        // @ts-ignore
+        const ip = await window.electron.getLocalIp();
+        if (ip) {
+          setQrUrl(`https://${ip}`);
+        }
+      } catch (error) {
+        console.error("Failed to set QR URL", error);
       }
     };
     setDynamicUrl();

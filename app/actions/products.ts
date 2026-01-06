@@ -52,13 +52,17 @@ export async function getProducts() {
         const productModel = (prisma as any).product;
 
         const count = await productModel.count();
+        console.log(`[Products] Total count in DB: ${count}`);
+
         if (count === 0) {
+            console.log("[Products] DB empty. Seeding...");
             await seedProducts();
         }
 
         const products = await productModel.findMany({
             where: { active: true }
         });
+        console.log(`[Products] Active products found: ${products.length}`);
 
         // Ensure consistent order, e.g., by price or specific logic if needed
         return products.sort((a: any, b: any) => a.price - b.price);

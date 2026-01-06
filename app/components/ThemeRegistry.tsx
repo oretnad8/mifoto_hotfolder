@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { getBrandingSettings } from "../actions/settings";
 
 const THEME_COLORS: Record<string, Record<string, string>> = {
     // Default / Orange
@@ -72,27 +73,39 @@ const THEME_COLORS: Record<string, Record<string, string>> = {
 };
 
 export default function ThemeRegistry({
-    color = "orange",
+    color: initialColor = "orange",
     children,
 }: {
     color?: string;
     children: React.ReactNode;
 }) {
+    const [themeColor, setThemeColor] = useState(initialColor);
+
+    // Effect to fetch latest settings on mount (in case they changed after server render)
+    useEffect(() => {
+        let mounted = true;
+        getBrandingSettings().then(settings => {
+            if (mounted && settings?.brandingThemeColor) {
+                setThemeColor(settings.brandingThemeColor);
+            }
+        });
+        return () => { mounted = false; };
+    }, []);
+
     useEffect(() => {
         const root = document.documentElement;
-        const safeColor = THEME_COLORS[color] ? color : "orange";
+        // Check if color exists in our palette, otherwise fallback to orange
+        const safeColor = THEME_COLORS[themeColor] ? themeColor : "orange";
         const palette = THEME_COLORS[safeColor];
+
+        console.log(`[ThemeRegistry] Applying color: ${safeColor}`);
 
         // Apply variables
         Object.entries(palette).forEach(([key, value]) => {
             root.style.setProperty(`--brand-${key}`, value);
         });
 
-    }, [color]);
+    }, [themeColor]);
 
-    // Render children immediately.
-    // CSS variables will be applied by useEffect on mount.
-    // To avoid FOUC (flash of unstyled content) or flash of wrong color, 
-    // we could also inject a style tag, but useEffect is requested/standard for client-side updates.
     return <>{children}</>;
 }

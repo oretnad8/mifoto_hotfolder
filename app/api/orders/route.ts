@@ -23,10 +23,10 @@ export async function POST(request: NextRequest) {
 
         const order = await prisma.order.create({
             data: {
-                client, // JSON
+                client: JSON.stringify(client), // Store as string
                 paymentMethod,
                 total,
-                items, // JSON
+                items: JSON.stringify(items), // Store as string
                 status: status || 'pending',
                 orderNumber: nextOrderNumber,
             },

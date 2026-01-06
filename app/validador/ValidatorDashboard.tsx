@@ -102,12 +102,12 @@ export default function ValidatorDashboard({
                                     </thead>
                                     <tbody className="divide-y divide-[#2D3A52]/10">
                                         {initialOrders.map((order) => {
-                                            const client = order.client as any;
+                                            const client = (typeof order.client === 'string' ? JSON.parse(order.client) : order.client) as any;
                                             const isPendingPayment =
                                                 order.status === "pending" &&
                                                 (order.paymentMethod === "transfer" ||
                                                     order.paymentMethod === "cash");
-                                            const items = (order.items as any[]) || [];
+                                            const items = (typeof order.items === 'string' ? JSON.parse(order.items) : order.items) as any[] || [];
 
                                             return (
                                                 <tr

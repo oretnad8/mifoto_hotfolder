@@ -49,7 +49,9 @@ export default function ActivationWizard() {
                     clientLogoUrl: result.clientLogoUrl,
                     welcomeText: result.welcomeText,
                     validatorPassword: result.validatorPassword,
-                    brandingThemeColor: result.themeColor
+                    brandingThemeColor: result.themeColor,
+                    subdomain: result.subdomain,
+                    mpAccessToken: result.mpAccessToken
                 });
 
                 // Success! Reload or notify parent.

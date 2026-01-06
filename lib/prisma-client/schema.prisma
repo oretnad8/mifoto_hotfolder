@@ -1,0 +1,53 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/prisma-client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./kiosk.db"
+}
+
+model Order {
+  id               String   @id @default(uuid())
+  client           String // Stored as JSON string
+  paymentMethod    String   @map("payment_method")
+  status           String   @default("pending") // pending, paid, validated
+  paymentReference String?  @map("payment_reference")
+  orderNumber      Int?     @map("order_number")
+  total            Float
+  items            String // Stored as JSON string
+  filesCopied      Boolean  @default(false) @map("files_copied")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@index([createdAt])
+  @@map("orders")
+}
+
+model KioskConfig {
+  id                  Int      @id @default(1)
+  brandingLogoPath    String?  @map("branding_logo_path")
+  brandingWelcomeText String?  @map("branding_welcome_text")
+  brandingThemeColor  String   @default("orange") @map("branding_theme_color")
+  validatorPassword   String?  @map("validator_password")
+  subdomain           String?
+  mpAccessToken       String?  @map("mp_access_token")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@map("kiosk_config")
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  price       Float
+  width       Float
+  height      Float
+  sku         String   @unique
+  active      Boolean  @default(true)
+  updatedAt   DateTime @updatedAt
+
+  @@map("products")
+}

@@ -113,55 +113,18 @@ const SizeSelection = ({ onSizeSelect, onBack }: SizeSelectionProps) => {
           <div className="w-12 sm:w-24"></div>
         </div>
 
-        {/* Vista móvil: Lista vertical */}
-        <div className="block sm:hidden space-y-4 mb-8">
+        {/* Unified Responsive Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6 lg:gap-8 mb-12">
           {sizes.map((size) => (
             <div
               key={size.id}
-              className={`bg-white/80 backdrop-blur-sm rounded-2xl p-6 cursor-pointer transition-all duration-500 ease-out hover:shadow-2xl ${selectedSize?.id === size.id
-                ? 'ring-4 ring-[#D75F1E] shadow-2xl scale-105'
-                : 'shadow-lg hover:scale-102'
+              className={`bg-white/80 backdrop-blur-sm rounded-2xl p-6 cursor-pointer transition-all duration-500 ease-out hover:shadow-2xl hover:-translate-y-1 sm:hover:-translate-y-2 flex flex-col items-center sm:block ${selectedSize?.id === size.id
+                  ? 'ring-4 ring-[#D75F1E] shadow-2xl scale-[1.02] sm:-translate-y-2'
+                  : 'shadow-lg'
                 }`}
               onClick={() => handleSizeClick(size)}
             >
-              <div className="flex items-center justify-center text-center">
-                <div className="flex flex-col items-center">
-                  {/* Representación visual del tamaño */}
-                  <div className="mb-6">
-                    <SizePreview
-                      size={size}
-                      isSelected={selectedSize?.id === size.id}
-                      isMobile={true}
-                    />
-                  </div>
-
-                  {/* Texto centrado */}
-                  <div>
-                    <h3 className="text-lg font-bold text-[#2D3A52] mb-1">{size.name}</h3>
-                    <p className="text-[#2D3A52]/70 mb-2">{size.dimensions}</p>
-                    <div className="flex items-center justify-center gap-1">
-                      <span className="text-[#D75F1E] font-bold text-lg">${size.price}</span>
-                      <span className="text-[#2D3A52]/70 text-sm">par</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Vista desktop: Grid */}
-        <div className="hidden sm:grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 lg:gap-8 mb-12">
-          {sizes.map((size) => (
-            <div
-              key={size.id}
-              className={`bg-white/80 backdrop-blur-sm rounded-2xl p-6 cursor-pointer transition-all duration-500 ease-out hover:shadow-2xl hover:-translate-y-2 ${selectedSize?.id === size.id
-                ? 'ring-4 ring-[#D75F1E] shadow-2xl -translate-y-2'
-                : 'shadow-lg'
-                }`}
-              onClick={() => handleSizeClick(size)}
-            >
-              <div className="mb-6 flex justify-center">
+              <div className="mb-6 flex justify-center w-full">
                 <SizePreview
                   size={size}
                   isSelected={selectedSize?.id === size.id}
@@ -169,7 +132,7 @@ const SizeSelection = ({ onSizeSelect, onBack }: SizeSelectionProps) => {
                 />
               </div>
 
-              <div className="text-center">
+              <div className="text-center w-full">
                 <h3 className="text-lg font-bold text-[#2D3A52] mb-2">{size.name}</h3>
                 <p className="text-[#2D3A52]/70 mb-3">{size.dimensions}</p>
                 <div className="bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 inline-block shadow-sm">

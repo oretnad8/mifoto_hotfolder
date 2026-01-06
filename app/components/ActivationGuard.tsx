@@ -28,7 +28,9 @@ export default function ActivationGuard({
                                 clientLogoUrl: res.clientLogoUrl,
                                 welcomeText: res.welcomeText,
                                 validatorPassword: res.validatorPassword,
-                                brandingThemeColor: res.themeColor
+                                brandingThemeColor: res.themeColor,
+                                subdomain: res.subdomain,
+                                mpAccessToken: res.mpAccessToken,
                             });
                             console.log("[ActivationGuard] Settings synced. Refreshing...");
                             router.refresh(); // Refresh to apply new theme/settings

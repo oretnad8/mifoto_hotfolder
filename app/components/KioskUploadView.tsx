@@ -87,6 +87,7 @@ const KioskUploadView = ({ selectedSize, onPhotosUploaded, onBack }: KioskUpload
                     name: f.name,
                     sourcePath: f.path
                 }));
+                console.log('[KioskUpload] Scanned photos preview sample:', scanned.slice(0, 3).map(p => p.preview));
 
                 setPhotos(scanned);
                 setFolders(result.folders || []);

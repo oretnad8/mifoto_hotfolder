@@ -1,8 +1,9 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Order, CartItem } from '../types';
+import { VirtualKeyboard } from './VirtualKeyboard';
 
 interface ConfirmationProps {
   cartItems: CartItem[];
@@ -13,6 +14,13 @@ interface ConfirmationProps {
 const Confirmation = ({ cartItems, onConfirm, onBack }: ConfirmationProps) => {
   const [customerName, setCustomerName] = useState('');
   const [errors, setErrors] = useState<any>({});
+  const [showKeyboard, setShowKeyboard] = useState(false);
+  const [isElectron, setIsElectron] = useState(false);
+
+  useEffect(() => {
+    setIsElectron(!!(window as any).electron);
+  }, []);
+
 
   const selectedKiosk = {
     id: 'main-kiosk',
@@ -71,8 +79,17 @@ const Confirmation = ({ cartItems, onConfirm, onBack }: ConfirmationProps) => {
     return `${letter1}${letter2}${num1}${num2}${letter3}${letter4}`;
   };
 
+  const handleKeyPress = (key: string) => {
+    setCustomerName(prev => prev + key);
+    if (errors.name) setErrors({ ...errors, name: undefined });
+  };
+
+  const handleDelete = () => {
+    setCustomerName(prev => prev.slice(0, -1));
+  };
+
   return (
-    <div className="min-h-screen bg-white px-8 py-12">
+    <div className="min-h-screen bg-white px-8 py-12 pb-80">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -127,6 +144,7 @@ const Confirmation = ({ cartItems, onConfirm, onBack }: ConfirmationProps) => {
                 <input
                   type="text"
                   value={customerName}
+                  onFocus={() => { if (isElectron) setShowKeyboard(true); }}
                   onChange={(e) => setCustomerName(e.target.value)}
                   placeholder="Ingresa tu nombre completo"
                   className={`w-full px-4 py-3 bg-white rounded-xl border-2 transition-colors duration-200 text-sm ${errors.name
@@ -207,6 +225,13 @@ const Confirmation = ({ cartItems, onConfirm, onBack }: ConfirmationProps) => {
           </div>
         </div>
       </div>
+
+      <VirtualKeyboard
+        isVisible={showKeyboard}
+        onKeyPress={handleKeyPress}
+        onDelete={handleDelete}
+        onClose={() => setShowKeyboard(false)}
+      />
     </div>
   );
 };
